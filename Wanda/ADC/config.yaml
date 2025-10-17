@@ -1,0 +1,39 @@
+ADC1:
+  enabled: true
+  gain: "GAIN_64"
+  data_rate: "30000SPS"
+  RST_PIN: 24
+  CS_PIN: 8        
+  DRDY_PIN: 22
+  channels:
+    0: "load_cell_1"
+    1: "load_cell_2"
+    2: "load_cell_3"
+    3: null
+
+ADC2:
+  enabled: false
+  gain: "GAIN_64"
+  data_rate: "30000SPS"
+  RST_PIN: 25
+  CS_PIN: 7 
+  DRDY_PIN: 23
+  channels:
+    0: null
+    1: null
+    2: null
+    3: null
+
+devices:
+  load_cells:
+    load_cell_1:
+      tare: null
+      scale: null
+    load_cell_2:
+      tare: null
+      scale: null
+    load_cell_3:
+      tare: null
+      scale: null
+  pressure_transducers:
+    null

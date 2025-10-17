@@ -1,0 +1,10 @@
+numpy
+pandas
+python-dateutil
+pytz
+PyYAML
+questdb
+rpi-lgpio
+six
+spidev
+tzdata
