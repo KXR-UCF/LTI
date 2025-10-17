@@ -33,7 +33,8 @@ Only follow the instructions in this section if a QuestDB docker container is no
     ```$ sudo /QuestdbScripts/startQuestDB.sh```  
 
 2. Edit [config.yaml](ADC/config.yaml) with current configuration.  
-    >!NOTE: Currently all three loadcells must be assigned to a channel
+> [!NOTE]  
+> Currently all three loadcells must be assigned to a channel
 
 3. Run [dataingestion.py](dataingestion.py)  
     ```$ python3 dataingestion.py```
