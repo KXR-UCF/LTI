@@ -21,6 +21,27 @@ CREATE TABLE telemetry_data (
   chamber_temp DOUBLE,
   nozzle_temp DOUBLE
 ) TIMESTAMP(timestamp) PARTITION BY DAY;
+CREATE TABLE controls_data (
+timestamp TIMESTAMP,
+  switch_1 BOOLEAN,
+  switch_2 BOOLEAN,
+  switch_3 BOOLEAN,
+  switch_4 BOOLEAN,
+  switch_5 BOOLEAN,
+  switch_6 BOOLEAN,
+  switch_7 BOOLEAN,
+  switch_8 BOOLEAN,
+  switch_9 BOOLEAN,
+  switch_10 BOOLEAN,
+  bt_1 BOOLEAN,
+  bt_2 BOOLEAN,
+  bt_3 BOOLEAN,
+  bt_4 BOOLEAN,
+  bt_5 BOOLEAN,
+  abort BOOLEAN,
+  enable_fire BOOLEAN,
+  fire BOOLEAN
+) TIMESTAMP(timestamp) PARTITION BY DAY;
 EOF
 )
 
@@ -36,7 +57,7 @@ until curl -s http://localhost:9003/status | grep -q "Healthy"; do
     sleep 1
 done
 
-# create table in QuestDB
+# create tables in QuestDB
 curl -G \
     --data-urlencode "query=$table" \
     http://localhost:9000/exec
