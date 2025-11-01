@@ -6,38 +6,59 @@ This folder contains all data ingestion code on WANDA. The controls socket serve
 
 ### Python
 1. Check Python 3.11.0 or higher is installed  
-```$ python3 --version```
+    ```
+    $ python3 --version
+    ```
 
-2. Create a virtual enviroment  
-    ```$ python3 -m venv venv```
+3. Create a virtual enviroment  
+    ```
+   $ python3 -m venv venv
+    ```
 
-3. Enter virtual enviroment  
-    ```$ source venv/bin/activate```
+4. Enter virtual enviroment  
+    ```
+   $ source venv/bin/activate
+    ```
+5. Install `swig` and `liblgpio-dev`
+    ```
+    $ sudo apt update
+    $ sudo apt install swig liblgpio-dev
+    ```
 
-4. Install all required python packages in [requirements.txt](requirements.txt)  
-    ```$ pip install -r requirements.txt```
+6. Install all required python packages in [requirements.txt](requirements.txt)  
+    ```
+   $ pip install -r requirements.txt
+    ```
 
 ### QuestDB
 Only follow the instructions in this section if a QuestDB docker container is not already set up.
 
 1. Check for any existing QuestDB instances  
-    ```$ sudo docker container ls -a```  
+    ```
+   $ sudo docker container ls -a
+    ```  
     Check for any containers using the questdb image, if none found continue.
 
-2. Create QuestDB container  
-    ```$ sudo /QuestdbScripts/createQuestDB.sh```  
+3. Create QuestDB container  
+    ```
+   $ sudo ./QuestdbScripts/createQuestDB.sh
+    ```  
 
 ## Start Data Ingestion
 
 1. Start QuestDB server  
-    ```$ sudo /QuestdbScripts/startQuestDB.sh```  
+    ```
+   $ sudo ./QuestdbScripts/startQuestDB.sh
+    ```  
 
-2. Edit [config.yaml](ADC/config.yaml) with current configuration.  
+3. Edit [config.yaml](ADC/config.yaml) with current configuration.  
 > [!NOTE]  
 > Currently all three loadcells must be assigned to a channel
 
 3. Run [dataingestion.py](dataingestion.py)  
-    ```$ python3 dataingestion.py```
+    ```
+   $ python3 dataingestion.py
+    ```
 
 ## Currently on the PI
 
@@ -46,19 +67,25 @@ In the home directory of the kxr user, there is a folder ```/home/kxr/LTI25```. 
 To start the code in that version:  
 
 1. Start QuestDB  
-    ```$ sudo /home/kxr/LTI25/startQuestDB.sh```  
+    ```
+   $ sudo /home/kxr/LTI-25/Wanda/QuestdbScripts/startQuestDB.sh
+    ```  
 
-2. Start the socket server  
-    ```$ python3 /home/kxr/LTI25/socket_server.py```
+3. Start the socket server  
+    ```
+   $ python3 /home/kxr/LTI-25/sockets/socket_server.py
+    ```
 
-3. Wait for socket client to connect
+5. Wait for socket client to connect
 
-4. Start questdbTest.py  
-    ```$ python3 /home/kxr/LTI25/questdbTest.py```
+6. Start questdbTest.py  
+    ```
+   $ python3 /home/kxr/LTI-25/Wanda/dataingestion.py
+    ```
 
-5. Wait for print statement **"connected to questdb"** from questdbTest.py
+8. Wait for print statement **"connected to questdb"** from questdbTest.py
 
-6. Turn enable fire key
+9. Turn enable fire key
 
 ## Notes
 
