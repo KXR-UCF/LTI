@@ -3,12 +3,15 @@
 
 """KXR file for handling sensors/transducers connected to the KXR ADS1256 Pi hat"""
 
-import ADS1256
+from ADC import ADS1256
 import numpy as np
 import yaml
+import os
 
+module_path = os.path.abspath(__file__)
+module_directory = os.path.dirname(module_path)
 
-CONFIG_FILE_NAME = "config.yaml"
+CONFIG_FILE_NAME = f"{module_directory}/config.yaml"
 with open(CONFIG_FILE_NAME, 'r') as file:
     config = yaml.safe_load(file)
 
