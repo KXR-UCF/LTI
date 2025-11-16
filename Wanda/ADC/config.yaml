@@ -9,7 +9,7 @@ ADC1:
     0: "load_cell_1"
     1: "load_cell_2"
     2: "load_cell_3"
-    3: null
+    3: "load_cell_4"
 
 ADC2:
   enabled: false

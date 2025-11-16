@@ -1,67 +1,91 @@
 PIs:
-  1:
+  contoller:
     enabled: true
-    controller: true
     ip: 192.168.1.7
+    relays:
+      1:
+        name: Nox Fill
+        switch: 1
+      2:
+        name: Nox Vent
+        switch: 2
+      3:
+        name: Nox Relief
+        switch: 3
+      4:
+        name: Nitrogen Fill
+        switch: 4
+      5:
+        name: Nitrogen Vent
+        switch: 5
+      6:
+        name: Continuity
+        switch: 6
+      7:
+        name: ENABLE FIRE
+        switch: ENABLE FIRE
+      8:
+        name: FIRE
+        switch: FIRE
+
+  1:
+    enabled: false
+    ip: null
+    relays:
+      1:
+        name: null
+        switch: null
+      2:
+        name: null
+        switch: null
+      3:
+        name: null
+        switch: null
+      4:
+        name: null
+        switch: null
+      5:
+        name: null
+        switch: null
+      6:
+        name: null
+        switch: null
+      7:
+        name: null
+        switch: null
+      8:
+        name: null
+        switch: null
+
   2:
     enabled: false
-    controller: false
     ip: null
-  3:
-    enabled: false
-    controller: false
-    ip: null
+    relays:
+      1:
+        name: null
+        switch: null
+      2:
+        name: null
+        switch: null
+      3:
+        name: null
+        switch: null
+      4:
+        name: null
+        switch: null
+      5:
+        name: null
+        switch: null
+      6:
+        name: null
+        switch: null
+      7:
+        name: null
+        switch: null
+      8:
+        name: null
+        switch: null
+    
 
 COSMO:
   ip: 192.168.1.6
-
-switches:
-  1: 
-    Name: Nox Fill
-    Pi: 1
-    Relay: 1
-  2:
-    Name: Nox Vent
-    Pi: 1
-    Relay: 2
-  3:
-    Name: Nox Relief
-    Pi: 1
-    Relay: 3
-  4:
-    Name: Nitrogen Fill
-    Pi: 1
-    Relay: 4
-  5:
-    Name: Nitrogen Vent
-    Pi: 1
-    Relay: 5
-  6:
-    Name: Continuity
-    Pi: 1
-    Relay: 6
-  7:
-    Name: null
-    Pi: null
-    Relay: null
-  8:
-    Name: null
-    Pi: null
-    Relay: null
-  9:
-    Name: null
-    Pi: null
-    Relay: null
-  10:
-    Name: null
-    Pi: null
-    Relay: null
-  enable_fire:
-    Pi: 1
-    Relay: 7
-  fire:
-    Pi: 1
-    Relay: 8
-  abort:
-    Pi: null
-    Relay: null

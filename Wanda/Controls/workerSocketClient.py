@@ -11,34 +11,42 @@ for pin in RELAY_PINS:
 controller_pi_address = "192.168.1.30"
 
 controller_pi_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-controller_pi_socket.connect(controller_pi_address, 9600)
+controller_pi_socket.connect((controller_pi_address, 9600))
 
 try:
     while True:
         # Receive data from COSMO (up to 1024 bytes at a time)
         msg = controller_pi_socket.recv(1024).decode()
-        success = False
-
+        
         # If there's no data, break the loop
         if not msg:
             print("No data received. Closing connection.")
             break
+        
+        cmds = msg.rstrip(';').split(';')
+        for cmd in cmds:
+            print(f"Recieved CMD: <{cmd}>")
+            success = False
 
-        # decode message
-        msg_info = msg.split(' ')
-        relay = int(msg_info[0])
-        relay_state = msg_info[0].strip() == "True"
+            # decode message
+            cmd_info = cmd.split(' ')
+            relay = int(cmd_info[0])
+            relay_state = cmd_info[0].strip() == "True"
 
-        # change relay state
-        if relay_state:
-            GPIO.output(RELAY_PINS[relay-1], GPIO.HIGH)
-            success = True
-        else:
-            GPIO.output(RELAY_PINS[relay-1], GPIO.LOW)
-            success = True
+            # change relay state
+            if relay_state:
+                GPIO.output(RELAY_PINS[relay-1], GPIO.HIGH)
+                success = True
+            else:
+                GPIO.output(RELAY_PINS[relay-1], GPIO.LOW)
+                success = True
 
-        if success:
-            controller_pi_socket.send(f"ACK: {msg}".encode())
+            if success:
+                print(f"Sending ACK\n")
+                controller_pi_socket.send(f"ACK: {msg}".encode())
+            else:
+                print(f"Sending ERR\n")
+                controller_pi_socket.send(f"ERR: {msg}".encode())
 
 except KeyboardInterrupt:
     print("Interrupted by user")
