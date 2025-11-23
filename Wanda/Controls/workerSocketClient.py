@@ -31,7 +31,7 @@ try:
             # decode message
             cmd_info = cmd.split(' ')
             relay = int(cmd_info[0])
-            relay_state = cmd_info[0].strip() == "True"
+            relay_state = cmd_info[1].strip() == "True"
 
             # change relay state
             if relay_state:
@@ -50,6 +50,9 @@ try:
 
 except KeyboardInterrupt:
     print("Interrupted by user")
+
+except (socket.error, ConnectionResetError, BrokenPipeError) as e:
+    print(f"Socket error or connection lost: {e}")
 
 finally:
     print("Shutting off Relays...")
