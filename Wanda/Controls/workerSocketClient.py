@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
 import socket
+import time
 
 RELAY_PINS = [5, 6, 13, 16, 19, 20, 21, 26]
 
@@ -8,10 +9,20 @@ GPIO.setwarnings(False)
 for pin in RELAY_PINS:
     GPIO.setup(pin, GPIO.OUT)
 
-controller_pi_address = "192.168.1.30"
+start_time = time.time()
 
+controller_pi_address = "192.168.1.30"
 controller_pi_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-controller_pi_socket.connect((controller_pi_address, 9600))
+connected = False
+print(f"Attempting to connect to {controller_pi_address}")
+while not connected:
+    try:
+        controller_pi_socket.connect((controller_pi_address, 9600))
+        connected = True
+    except OSError as e:
+        program_time = time.time() - start_time
+        print(f"{program_time:<5.2f}s Failed to connect... Attempting to connect")
+        time.sleep(1)
 
 try:
     while True:
