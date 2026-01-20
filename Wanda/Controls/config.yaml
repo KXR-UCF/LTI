@@ -1,7 +1,7 @@
 PIs:
-  contoller:
+  controller:
     enabled: true
-    ip: 192.168.1.7
+    ip: 192.168.1.30
     relays:
       1:
         name: Nox Fill
@@ -29,8 +29,8 @@ PIs:
         switch: FIRE
 
   1:
-    enabled: false
-    ip: null
+    enabled: true
+    ip: 192.168.1.31
     relays:
       1:
         name: null
@@ -59,7 +59,7 @@ PIs:
 
   2:
     enabled: false
-    ip: null
+    ip: 192.168.1.32
     relays:
       1:
         name: null
