@@ -6,8 +6,11 @@ import os
 
 # from questdb.ingress import Sender, Protocol
 from datetime import datetime
+from pytz import timezone
+est = timezone('US/Eastern')
 
-import overrideCMD
+from overrideCMD import OverrideManager
+
 
 class WorkerPi:
     def __init__(self, id, client_ip_address, client_socket: socket):
@@ -28,7 +31,7 @@ RELAY_PINS = [5, 6, 13, 16, 19, 20, 21, 26]
 # Define the server's IP address and port
 HOST = '0.0.0.0'  # Accept connections from any IP address
 PORT = 9600        # Same port as in the client
-CONFIG_FILE_NAME = f"config.yaml"
+CONFIG_FILE_NAME = "config.yaml"
 
 
 
@@ -37,15 +40,15 @@ class ControllerServer:
         self.load_config()
         self.setup_gpio()
         self.setup_socket()
+        self.switch_map = self.build_switch_map()
 
         self.worker_pis = {}
         self.cosmo_socket = None
         self.cosmo_address = None
-
         self.switch_states = {}
         self.abort = False
 
-        self.switch_map = self.build_switch_map()
+        self.override_manager = OverrideManager(self)
 
 
     def load_config(self):
@@ -125,8 +128,9 @@ class ControllerServer:
 
 
     def send_command_to_worker(self, worker_id, command, max_retries=5):
+        print("-"*30)
         if worker_id not in self.worker_pis:
-            print(f"Error: Worker {worker_id} not found")
+            print(f"ERR: Worker {worker_id} not found")
             return False
         
         worker_pi = self.worker_pis[worker_id]
@@ -144,16 +148,15 @@ class ControllerServer:
             # send command
             try:
                 worker_pi.socket.send(f"{command};".encode())
-                print(f"Sent to Pi<{worker_pi.id}>: <{command}>")
+                print(f"Sent to Pi <{worker_pi.id}>: <{command}>")
                 attempts += 1
 
                 response_msg = worker_pi.socket.recv(1024).decode().strip()
 
+                print(f"Recieved Response: <{response_msg}>")
                 if f"ACK: {command}" in response_msg:
-                    print(f"Recieved Response: <{response_msg}>")
                     return True
                 elif f"ERR: {command}" in response_msg:
-                    print(f"Recieved Response: <{response_msg}>")
                     return False
                 
             except socket.timeout:
@@ -209,9 +212,33 @@ class ControllerServer:
         return switch_id, state
 
 
+    def set_relay(self, pi_id, relay_id, state):
+        success = False
+
+        if self.abort:
+            return False
+
+        if pi_id == "controller":
+            if state:
+                GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
+            else:
+                GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
+            print(f"Controller: Relay:{relay_id} State:{state}")
+            success = True
+
+        else:
+            worker_msg = f"{relay_id} {state}"
+            if not self.send_command_to_worker(pi_id, worker_msg):
+                success = False
+
+        return success
+
+
     def handle_command(self, cmd: str):
         print("="*50)
-        print(f'CMD: <{cmd}>') 
+        print(f'CMD: <{cmd}>')
+        time_now = datetime.now(tz=est)
+        print(f"Time: {time_now}")
         success = False
         
         try:
@@ -219,30 +246,25 @@ class ControllerServer:
 
             target_relays = self.switch_map.get(switch_id, [])
             
+            success = True
             # if abort shut off all relays
+            
             if self.abort:
                 target_state = False
                 for pi_id in self.config["PIs"]:
                     if self.config["PIs"][pi_id]["enabled"]:
                         for relay_id in self.config["PIs"][pi_id]["relays"]:
                             target_relays.append({"pi": pi_id, "relay": relay_id})
-                    
-            success = True
-            for relay_data in target_relays:
-                pi_id = relay_data["pi"]
-                relay_id = relay_data["relay"]
-                
-                if pi_id == "controller":
-                    if target_state:
-                        GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
-                    else:
-                        GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
-                    print(f"Controller: Relay:{relay_id} State:{target_state}")
 
-                else:
-                    worker_msg = f"{relay_id} {target_state}"
-                    if not self.send_command_to_worker(pi_id, worker_msg):
-                        success = False
+            elif switch_id.lower() in OverrideManager.OVERRIDDEN_CMDS:
+                success = success and self.override_manager.process_command(switch_id)
+
+            else:
+                for relay_data in target_relays:
+                    pi_id = relay_data["pi"]
+                    relay_id = relay_data["relay"]
+
+                    success = success and self.set_relay(pi_id, relay_id, target_state)
 
             # respond to COSMO
             if success:
@@ -250,16 +272,34 @@ class ControllerServer:
                 self.cosmo_socket.send(f"ACK: {cmd};".encode())
                 print("Sent ACK")
             else:
-                print(f"Sent ERR")
                 self.cosmo_socket.send(f"ERR: {cmd};".encode())
+                print(f"Sent ERR")
 
         except ValueError as e:
-            print('ERR')
-            print(f"{e} \n\n CMD: <{cmd}>")
+            print(f"ERR: {e} \n\n CMD: <{cmd}>")
             self.cosmo_socket.send(f"ERR: {cmd};".encode())
 
 
+    def cleanup(self):
+            # Make sure all Relays are off, close the client socket and server socket
+            print("Shutting off Relays...")
+            for pin in RELAY_PINS:
+                GPIO.output(pin, GPIO.LOW)
+            
+            print("Closing connections...")
+            if self.cosmo_socket:
+                self.cosmo_socket.close()
+            for worker_pi in self.worker_pis.values():
+                worker_pi.socket.close()
+            if self.server_socket:
+                self.server_socket.close()
+        
+            GPIO.cleanup()
+            print("Cleanup complete.")
+
+
     def main(self):
+        print(f"{'='*50}\n{'='*50}")
         # with Sender.from_conf(conf) as sender:
         # print("Connected to Questdb")
         # print(f"{'='*50}")
@@ -291,22 +331,6 @@ class ControllerServer:
         finally:
             self.cleanup()
 
-    def cleanup(self):
-            # Make sure all Relays are off, close the client socket and server socket
-            print("Shutting off Relays...")
-            for pin in RELAY_PINS:
-                GPIO.output(pin, GPIO.LOW)
-            
-            print("Closing connections...")
-            if self.cosmo_socket:
-                self.cosmo_socket.close()
-            for worker_pi in self.worker_pis.values():
-                worker_pi.socket.close()
-            if self.server_socket:
-                self.server_socket.close()
-        
-            GPIO.cleanup()
-            print("Cleanup complete.")
 
 if __name__ == '__main__':
     server = ControllerServer()
