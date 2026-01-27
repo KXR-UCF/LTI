@@ -212,26 +212,29 @@ class ControllerServer:
         return switch_id, state
 
 
+    # handles abort
     def set_relay(self, pi_id, relay_id, state):
         success = False
+        target_state = state
 
         if self.abort:
-            return False
+            target_state = False
 
         if pi_id == "controller":
-            if state:
+            if target_state:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
             else:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
-            print(f"Controller: Relay:{relay_id} State:{state}")
+            print(f"Controller: Relay:{relay_id} State:{target_state}")
             success = True
 
         else:
-            worker_msg = f"{relay_id} {state}"
+            worker_msg = f"{relay_id} {target_state}"
             if not self.send_command_to_worker(pi_id, worker_msg):
                 success = False
 
-        return success
+        return success and target_state == state
+
 
 
     def handle_command(self, cmd: str):
@@ -250,11 +253,11 @@ class ControllerServer:
             # if abort shut off all relays
             
             if self.abort:
-                target_state = False
+                target_state = False # target state of all relays during an abort
                 for pi_id in self.config["PIs"]:
                     if self.config["PIs"][pi_id]["enabled"]:
                         for relay_id in self.config["PIs"][pi_id]["relays"]:
-                            target_relays.append({"pi": pi_id, "relay": relay_id})
+                            self.set_relay(pi_id, relay_id, target_state) # shut off each relay
 
             elif switch_id.lower() in OverrideManager.OVERRIDDEN_CMDS:
                 success = success and self.override_manager.process_command(switch_id)
