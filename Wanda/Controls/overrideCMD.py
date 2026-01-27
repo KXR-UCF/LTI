@@ -19,38 +19,10 @@ class OverrideManager:
 
     # TEST SEQUENCE
     def run_fire(self):
-        self.controller.set_relay("controller", 1, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 2, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 3, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 4, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 5, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 6, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 7, True)
-        time.sleep(0.5)
-        self.controller.set_relay("controller", 8, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 1, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 2, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 3, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 4, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 5, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 6, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 7, True)
-        time.sleep(0.5)
-        self.controller.set_relay("1", 8, True)
-        time.sleep(0.5)
+        for pi_id in ["controller", "1"]:
+            for relay_id in range(1, 9):
+                self.controller.set_relay(pi_id, relay_id, True)
+                time.sleep(0.5)
 
 
     def run_enable_fire(self):
