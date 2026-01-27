@@ -13,7 +13,8 @@ class OverrideManager:
         if cmd in self.OVERRIDDEN_CMDS:
             if self.active_thread and self.active_thread.is_alive():
                 return True
-            self.active_thread = self.OVERRIDDEN_CMDS[cmd](self.controller)
+            self.active_thread = threading.Thread(target=self.OVERRIDDEN_CMDS[cmd], args=(self.controller,))
+            self.active_thread.start()
             return True
         return False   
 
