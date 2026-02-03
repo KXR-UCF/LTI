@@ -2,15 +2,18 @@ import RPi.GPIO as GPIO
 import socket
 import time
 
+# numbered in order 1-8
 RELAY_PINS = [5, 6, 13, 16, 19, 20, 21, 26]
 
+# relay pin setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 for pin in RELAY_PINS:
     GPIO.setup(pin, GPIO.OUT)
 
 start_time = time.time()
-
+ 
+# socket client -> server set up
 controller_pi_address = "192.168.1.30"
 controller_pi_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connected = False
@@ -34,30 +37,53 @@ try:
             print("No data received. Closing connection.")
             break
         
+        # splits message into each command
         cmds = msg.rstrip(';').split(';')
         for cmd in cmds:
             print(f"Recieved CMD: <{cmd}>")
             success = False
+            err_msg = ""
 
-            # decode message
-            cmd_info = cmd.split(' ')
-            relay = int(cmd_info[0])
-            relay_state = cmd_info[1].strip() == "True"
+            # decode message (FORM: "relay# True/False")
+            try:
+                # split command into parts
+                cmd_info = cmd.split(' ')
+                if len(cmd_info) != 2:
+                    raise ValueError("Invalid Format")
+                
+                # get relay number from command
+                relay = int(cmd_info[0])
+                if not (1 <= relay <= 8):
+                    raise ValueError("Invalid Relay Number")
+                
+                # get relay state from command
+                if cmd_info[1].strip() == "True":
+                    relay_state = GPIO.HIGH
+                elif cmd_info[1].strip() == "False":
+                    relay_state = GPIO.LOW    
+                else:
+                    raise ValueError("Invalid State")
+                
+                # set relay state
+                GPIO.output(RELAY_PINS[relay-1], relay_state)
 
-            # change relay state
-            if relay_state:
-                GPIO.output(RELAY_PINS[relay-1], GPIO.HIGH)
-                success = True
-            else:
-                GPIO.output(RELAY_PINS[relay-1], GPIO.LOW)
-                success = True
+                # check relay state
+                if GPIO.input(RELAY_PINS[relay-1]) == relay_state:
+                    success = True
+                else:
+                    success = False
+                    err_msg = "Relay State Mismatch"
 
+            except ValueError as e:
+                success = False
+                err_msg = e
+            
             if success:
                 print(f"Sending ACK\n")
                 controller_pi_socket.send(f"ACK: {msg}".encode())
             else:
                 print(f"Sending ERR\n")
-                controller_pi_socket.send(f"ERR: {msg}".encode())
+                controller_pi_socket.send(f"ERR: {msg},{err_msg}".encode())
 
 except KeyboardInterrupt:
     print("Interrupted by user")
