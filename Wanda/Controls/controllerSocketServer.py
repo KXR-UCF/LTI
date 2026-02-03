@@ -220,7 +220,7 @@ class ControllerServer:
         if self.abort:
             target_state = False
 
-        if pi_id == "controller":
+        if str(pi_id) == "controller":
             if target_state:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
             else:
@@ -259,7 +259,7 @@ class ControllerServer:
                         for relay_id in self.config["PIs"][pi_id]["relays"]:
                             self.set_relay(pi_id, relay_id, target_state) # shut off each relay
 
-            elif switch_id.lower() in OverrideManager.OVERRIDDEN_CMDS:
+            elif str(switch_id).lower() in OverrideManager.OVERRIDDEN_CMDS:
                 success = success and self.override_manager.process_command(switch_id)
 
             else:
