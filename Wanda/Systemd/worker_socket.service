@@ -1,0 +1,14 @@
+[Unit]
+Description=Socket Client (Worker)
+After=network.target
+
+[Service]
+Type=simple
+User=lti
+WorkingDirectory=/home/lti/Production
+Restart=always
+RestartSec=5
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/Controls/workerSocketClient.py >> /home/lti/Production/socket.out 2>&1'
+
+[Install]
+WantedBy=multi-user.target
