@@ -11,10 +11,14 @@ import socket
 
 hostname = socket.gethostname()
 
+from datetime import datetime
+from pytz import timezone
+est = timezone('US/Eastern')
+
 conf = (
-    'tcp::addr=localhost:9009;'
-    'auto_flush=off;'
-    # 'auto_flush_rows=1;'
+    'tcp::addr=192.168.1.32:9009;'
+    'auto_flush=on;'
+    'auto_flush_rows=2;'
 )
 
 sensors = []
@@ -69,10 +73,10 @@ try:
             sender.row(
                 table_name=hostname,
                 columns=columns,
-                at=TimestampNanos.now()
+                at=datetime.now(tz=est)
             )
             # flush row to questdb
-            sender.flush()
+            # sender.flush()
             row_count += 1
             questdb_times.append(time.time() - questdb_start)
             
