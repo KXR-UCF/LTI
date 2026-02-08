@@ -10,19 +10,19 @@ PIs:
         name: Nox Vent
         switch: 2
       3:
-        name: Nox Relief
-        switch: 3
-      4:
-        name: Nitrogen Fill
-        switch: 4
-      5:
-        name: Nitrogen Vent
-        switch: 5
-      6:
-        name: Continuity
+        name: N2 Fill
         switch: 6
+      4:
+        name: N2 Vent
+        switch: 7
+      5:
+        name: Servo Power
+        switch: 9
+      6:
+        name: ARM 1
+        switch: ENABLE FIRE
       7:
-        name: ENABLE FIRE
+        name: ARM 2
         switch: ENABLE FIRE
       8:
         name: FIRE
@@ -33,23 +33,23 @@ PIs:
     ip: 192.168.1.31
     relays:
       1:
-        name: null
-        switch: null
+        name: Fuel Main  # Will be used in timing
+        switch: 5
       2:
-        name: null
-        switch: null
+        name: NOX Main # will be used in timing
+        switch: 5
       3:
-        name: null
-        switch: null
+        name: Fuel/N2 Relief
+        switch: 8
       4:
-        name: null
-        switch: null
+        name: NOX Relief
+        switch: 3
       5:
-        name: null
-        switch: null
+        name: Servo Move
+        switch: 10
       6:
-        name: null
-        switch: null
+        name: Dome Vent
+        switch: 4
       7:
         name: null
         switch: null
@@ -85,7 +85,7 @@ PIs:
       8:
         name: null
         switch: null
-    
+
 
 COSMO:
-  ip: 192.168.1.6
+  ip: 192.168.1.8
