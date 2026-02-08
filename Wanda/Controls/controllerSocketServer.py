@@ -54,7 +54,7 @@ class ControllerServer:
     def load_config(self):
         module_dir = os.path.dirname(os.path.abspath(__file__))
         config_file_path = os.path.join(module_dir, CONFIG_FILE_NAME)
-
+        
         with open(config_file_path, 'r') as file:
             self.config = yaml.safe_load(file)
         

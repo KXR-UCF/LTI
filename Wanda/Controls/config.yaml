@@ -59,7 +59,7 @@ PIs:
 
   2:
     enabled: false
-    ip: null
+    ip: 192.168.1.32
     relays:
       1:
         name: null
