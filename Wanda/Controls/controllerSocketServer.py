@@ -267,7 +267,7 @@ class ControllerServer:
                     pi_id = relay_data["pi"]
                     relay_id = relay_data["relay"]
                     success = success and self.set_relay(pi_id, relay_id, target_state)
-                    print(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
+                    # print(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
 
             # respond to COSMO
             if success:
