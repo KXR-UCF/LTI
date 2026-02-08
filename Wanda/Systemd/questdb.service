@@ -1,0 +1,16 @@
+[Unit]
+Description=QuestDB Docker Container
+After=docker.service network.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+Environment="CONTAINER_NAME=osiris"
+ExecStart=/usr/bin/docker start $CONTAINER_NAME
+ExecStartPost=/bin/bash -c 'while ! curl -s -f "http://127.0.0.1:9000/exec?query=select+1" > /dev/null; do sleep 1; done'
+ExecStop=/usr/bin/docker stop $CONTAINER_NAME
+
+[Install]
+WantedBy=multi-user.target
