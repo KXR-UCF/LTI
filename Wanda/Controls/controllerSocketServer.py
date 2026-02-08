@@ -54,7 +54,7 @@ class ControllerServer:
     def load_config(self):
         module_dir = os.path.dirname(os.path.abspath(__file__))
         config_file_path = os.path.join(module_dir, CONFIG_FILE_NAME)
-        
+
         with open(config_file_path, 'r') as file:
             self.config = yaml.safe_load(file)
         
@@ -129,11 +129,12 @@ class ControllerServer:
 
     def send_command_to_worker(self, worker_id, command, max_retries=5):
         print("-"*30)
-        if worker_id not in self.worker_pis:
+        print(worker_id)
+        if str(worker_id) not in list(self.worker_pis):
             print(f"ERR: Worker {worker_id} not found")
             return False
         
-        worker_pi = self.worker_pis[worker_id]
+        worker_pi = self.worker_pis[str(worker_id)]
 
         attempts = 0
         while attempts < max_retries:
@@ -193,7 +194,7 @@ class ControllerServer:
 
         # handle enable fire 
         elif cmd_lower == "enable fire" or cmd_lower == "disable fire":
-            switch_id = "ENABLE FIRE"
+            switch_id = cmd_lower
             state = (cmd_lower == "enable fire".lower())
 
         # handle fire
@@ -226,12 +227,10 @@ class ControllerServer:
             else:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
             print(f"Controller: Relay:{relay_id} State:{target_state}")
-            success = True
-
+            
         else:
             worker_msg = f"{relay_id} {target_state}"
-            if not self.send_command_to_worker(pi_id, worker_msg):
-                success = False
+            success = self.send_command_to_worker(pi_id, worker_msg)
 
         return success and target_state == state
 
@@ -266,6 +265,7 @@ class ControllerServer:
                 for relay_data in target_relays:
                     pi_id = relay_data["pi"]
                     relay_id = relay_data["relay"]
+
 
                     success = success and self.set_relay(pi_id, relay_id, target_state)
 
