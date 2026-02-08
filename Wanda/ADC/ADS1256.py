@@ -63,7 +63,7 @@ CMD = {'CMD_WAKEUP' : 0x00,     # Completes SYNC and Exits Standby Mode 0000  00
       }
 
 SPI = spidev.SpiDev(0, 0)
-SPI.max_speed_hz = 1000000  # 1 MHz
+SPI.max_speed_hz = 500000  # 500 kHz
 
 
 class ADS1256:
@@ -97,10 +97,13 @@ class ADS1256:
         GPIO.setup(self.cs_pin, GPIO.OUT)
         #GPIO.setup(DRDY_PIN, GPIO.IN)
         GPIO.setup(self.drdy_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        SPI.max_speed_hz = 20000
+        # SPI.max_speed_hz = 20000
         SPI.mode = 0b01
         return 0
 
+    def module_exit(self):
+        GPIO.cleanup()
+        SPI.close()
 
     # Hardware reset
     def reset(self):
@@ -159,6 +162,8 @@ class ADS1256:
         
         self.digital_write(self.cs_pin, GPIO.HIGH)#cs 1
         self.delay_ms(1) 
+        self.gain = 2 ** gain
+
 
 
     def setChannel(self, Channel):
@@ -203,7 +208,7 @@ class ADS1256:
         self.waitDRDY()
         self.digital_write(self.cs_pin, GPIO.LOW)#cs  0
         self.spi_writebyte([CMD['CMD_RDATA']])
-        # self.delay_ms(10)
+        self.delay_ms(10)
 
         buf = self.spi_readbytes(3)
         self.digital_write(self.cs_pin, GPIO.HIGH)#cs 1
@@ -211,14 +216,14 @@ class ADS1256:
         read |= (buf[1]<<8) & 0xff00
         read |= (buf[2]) & 0xff
         if (read & 0x800000):
-            read &= 0xF000000
+            read &= 0xFF000000
         return read
  
     def getChannelValue(self, Channel):
         if(self.scan_mode == 0):# 0  Single-ended input  8 channel1 Differential input  4 channe
             if(Channel>=8):
                 return 0
-            print(self.scan_mode)
+            # print(self.scan_mode)
             self.setChannel(Channel)
             self.writeCmd(CMD['CMD_SYNC'])
             # self.delay_ms(10)
@@ -230,18 +235,29 @@ class ADS1256:
                 return 0
             self.setDiffChannel(Channel)
             self.writeCmd(CMD['CMD_SYNC'])
-            # self.delay_ms(10) 
+            self.delay_ms(10)
             self.writeCmd(CMD['CMD_WAKEUP'])
-            # self.delay_ms(10) 
+            self.delay_ms(10)
             Value = self.read_ADC_Data()
         return Value
+    
+    def getChannelVoltage(self, channel, Vref=2.5):
+        value = self.getChannelValue(channel)
+        voltage = (value * 5.0 / 0x7fffff) / self.gain
+        return voltage
         
     # returns all values by channel
     # automatically handles differential mode through getChannelValue
-    def getAll(self):
+    def getAllValues(self):
         ADC_Value = [0,0,0,0,0,0,0,0]
         for i in range(0,8,1):
             ADC_Value[i] = self.getChannelValue(i)
         return ADC_Value
+    
+    def getAllVoltages(self):
+        ADC_Voltage = [0,0,0,0,0,0,0,0]
+        for i in range(0,8,1):
+            ADC_Voltage[i] = self.getChannelVoltage(i)
+        return ADC_Voltage
 ### END OF FILE ###
 

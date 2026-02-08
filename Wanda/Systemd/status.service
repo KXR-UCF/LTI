@@ -1,0 +1,14 @@
+[Unit]
+Description=Status Server Service (SSS)
+After=network.target
+
+[Service]
+Type=simple
+User=lti
+WorkingDirectory=/home/lti/Production
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/status_server.py >> /home/lti/Production/status.out 2>&1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

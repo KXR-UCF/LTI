@@ -1,39 +1,70 @@
 ADC1:
   enabled: true
+  differential: true
   gain: "GAIN_64"
-  data_rate: "30000SPS"
+  data_rate: "3750SPS"
   RST_PIN: 24
   CS_PIN: 8        
   DRDY_PIN: 22
   channels:
-    0: "load_cell_1"
-    1: "load_cell_2"
-    2: "load_cell_3"
-    3: "load_cell_4"
+    0: "lc1"
+    1: "lc2"
+    2: "lc3"
+    3: "lc4"
 
 ADC2:
-  enabled: false
-  gain: "GAIN_64"
-  data_rate: "30000SPS"
+  enabled: true
+  differential: false
+  gain: "GAIN_1"
+  data_rate: "3750SPS"
   RST_PIN: 25
   CS_PIN: 7 
   DRDY_PIN: 23
   channels:
-    0: null
-    1: null
-    2: null
-    3: null
+    0: "pt1"
+    1: "pt2"
+    2: "pt3"
+    3: "pt4"
+    4: "pt5"
+    5: "pt6"
+    6: "pt7"
+    7: "pt8"
 
-devices:
-  load_cells:
-    load_cell_1:
-      tare: null
-      scale: null
-    load_cell_2:
-      tare: null
-      scale: null
-    load_cell_3:
-      tare: null
-      scale: null
-  pressure_transducers:
-    null
+
+sensors:
+  lc1:
+    zero: null
+    scale: null
+  lc2:
+    zero: null
+    scale: null
+  lc3:
+    zero: null
+    scale: null
+  lc4:
+    zero: null
+    scale: null
+  pt1:
+    zero: null
+    scale: null
+  pt2:
+    zero: null
+    scale: null
+  pt3:
+    zero: null
+    scale: null
+  pt4:
+    zero: null
+    scale: null
+  pt5:
+    zero: null
+    scale: null
+  pt6:
+    zero: null
+    scale: null
+  pt7:
+    zero: null
+    scale: null
+  pt8:
+    zero: null
+    scale: null
