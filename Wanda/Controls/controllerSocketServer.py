@@ -226,6 +226,7 @@ class ControllerServer:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
             else:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
+                success = True
             print(f"Controller: Relay:{relay_id} State:{target_state}")
             
         else:
@@ -265,9 +266,8 @@ class ControllerServer:
                 for relay_data in target_relays:
                     pi_id = relay_data["pi"]
                     relay_id = relay_data["relay"]
-
-
                     success = success and self.set_relay(pi_id, relay_id, target_state)
+                    print(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
 
             # respond to COSMO
             if success:
