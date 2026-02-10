@@ -217,7 +217,7 @@ class ControllerServer:
         success = False
         target_state = state
 
-        if self.abort:
+        if self.abort and success:
             target_state = False
             print(f"Unable to actuate due to abort")
             return False
@@ -235,7 +235,7 @@ class ControllerServer:
             success = self.send_command_to_worker(pi_id, worker_msg)
 
         # return success and target_state == state
-        print(f"[DEBUG: end of set relay: sucess: {success}]")
+        # print(f"[DEBUG: end of set relay: sucess: {success}]")
         return success
 
 
@@ -269,7 +269,7 @@ class ControllerServer:
                     pi_id = relay_data["pi"]
                     relay_id = relay_data["relay"]
                     success = success and self.set_relay(pi_id, relay_id, target_state)
-                    print(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
+                    # print(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
 
             # respond to COSMO
             if success:
