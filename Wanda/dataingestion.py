@@ -18,7 +18,8 @@ est = timezone('US/Eastern')
 conf = (
     'tcp::addr=192.168.1.32:9009;'
     'auto_flush=on;'
-    'auto_flush_rows=2;'
+    'auto_flush_interval=100;'
+    # 'auto_flush_rows=2;'
 )
 
 sensors = []
