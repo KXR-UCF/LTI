@@ -217,8 +217,7 @@ class ControllerServer:
         success = False
         target_state = state
 
-        if self.abort and success:
-            target_state = False
+        if self.abort and state:
             print(f"Unable to actuate due to abort")
             return False
 
