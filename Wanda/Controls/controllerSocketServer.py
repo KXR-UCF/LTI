@@ -34,9 +34,14 @@ PORT = 9600        # Same port as in the client
 CONFIG_FILE_NAME = "config.yaml"
 
 
+def print_log(message:str):
+    lines = message.split('\n')
+    for line in lines:
+        print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S')}] {line}")
 
 class ControllerServer:
     def __init__(self):
+        print_log(f"{'='*50}\n{'='*50}\n{'='*50}\nController Started")
         self.load_config()
         self.setup_gpio()
         self.setup_socket()
@@ -79,7 +84,7 @@ class ControllerServer:
 
         # Enable the server to accept connections (max 1 connection in the backlog queue)
         self.server_socket.listen(5)
-        print(f"Server listening on {HOST}:{PORT}...")
+        print_log(f"Server listening on {HOST}:{PORT}...")
 
 
     def build_switch_map(self):
@@ -95,7 +100,7 @@ class ControllerServer:
 
 
     def wait_for_connections(self):
-        print(f"Waiting for {self.num_enabled_pis} connections...")
+        print_log(f"Waiting for {self.num_enabled_pis} connections...")
         COSMO_connected = False
         num_connected_workers = 0
 
@@ -107,7 +112,7 @@ class ControllerServer:
             if ip == self.config["COSMO"]["ip"]:
                 self.cosmo_socket = client_socket
                 COSMO_connected = True
-                print("COSMO Connection Established")
+                print_log("COSMO Connection Established")
                 continue
 
             # check for worker Pi connection
@@ -116,21 +121,21 @@ class ControllerServer:
                 if ip == data["ip"]:
                     client_socket.settimeout(0.2)
                     self.worker_pis[str(pi_id)] = WorkerPi(pi_id, client_address, client_socket)
-                    print(f"Pi {pi_id} Connection Established")
+                    print_log(f"Pi {pi_id} Connection Established")
                     known_worker = True
                     num_connected_workers += 1
                     break
 
             if not known_worker and not COSMO_connected:
-                print(f"Unknown connection from {ip}")
+                print_log(f"Unknown connection from {ip}")
 
-        print("ALL CONNECTIONs ESTABLISHED")
+        print_log("ALL CONNECTIONs ESTABLISHED")
 
 
     def send_command_to_worker(self, worker_id, command, max_retries=5):
-        print("-"*30)
+        print_log("-"*30)
         if str(worker_id) not in list(self.worker_pis):
-            print(f"ERR: Worker {worker_id} not found")
+            print_log(f"ERR: Worker {worker_id} not found")
             return False
         
         worker_pi = self.worker_pis[str(worker_id)]
@@ -148,24 +153,24 @@ class ControllerServer:
             # send command
             try:
                 worker_pi.socket.send(f"{command};".encode())
-                print(f"Sent to Pi <{worker_pi.id}>: <{command}>")
+                print_log(f"Sent to Pi <{worker_pi.id}>: <{command}>")
                 attempts += 1
 
                 response_msg = worker_pi.socket.recv(1024).decode().strip()
 
-                print(f"Recieved Response: <{response_msg}>")
+                print_log(f"Recieved Response: <{response_msg}>")
                 if f"ACK: {command}" in response_msg:
                     return True
                 elif f"ERR: {command}" in response_msg:
                     return False
                 
             except socket.timeout:
-                print(f"Socket Timeout for Pi {worker_pi.id}")
+                print_log(f"Socket Timeout for Pi {worker_pi.id}")
                 attempts += 1
             except socket.error as e:
-                print(f"Socket Error for Pi {worker_pi.id}: {e}")
+                print_log(f"Socket Error for Pi {worker_pi.id}: {e}")
         
-        print(f"Max retries reached for Pi {worker_pi.id}")
+        print_log(f"Max retries reached for Pi {worker_pi.id}")
         return False
             
     # decodes command (FORM: "switch open/close")
@@ -218,7 +223,7 @@ class ControllerServer:
         target_state = state
 
         if self.abort and state:
-            print(f"Unable to actuate due to abort")
+            print_log(f"Unable to actuate due to abort")
             return False
 
         if str(pi_id) == "controller":
@@ -227,22 +232,22 @@ class ControllerServer:
             else:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
             success = True
-            print(f"Controller: Relay:{relay_id} State:{target_state}")
+            print_log(f"Controller: Relay:{relay_id} State:{target_state}")
             
         else:
             worker_msg = f"{relay_id} {target_state}"
             success = self.send_command_to_worker(pi_id, worker_msg)
 
         # return success and target_state == state
-        # print(f"[DEBUG: end of set relay: sucess: {success}]")
+        # print_log(f"[DEBUG: end of set relay: sucess: {success}]")
         return success
 
 
     def handle_command(self, cmd: str):
-        print("="*50)
-        print(f'CMD: <{cmd}>')
+        print_log("="*50)
+        print_log(f'CMD: <{cmd}>')
         time_now = datetime.now(tz=est)
-        print(f"Time: {time_now}")
+        print_log(f"Time: {time_now}")
         success = False
         
         try:
@@ -268,29 +273,29 @@ class ControllerServer:
                     pi_id = relay_data["pi"]
                     relay_id = relay_data["relay"]
                     success = success and self.set_relay(pi_id, relay_id, target_state)
-                    # print(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
+                    # print_log(f"[DEBUG: After Set Relay]: pid:{pi_id} rid:{relay_id} ts:{target_state} s:{success}")
 
             # respond to COSMO
             if success:
                 self.switch_states[switch_id] = target_state
                 self.cosmo_socket.send(f"ACK: {cmd};".encode())
-                print("Sent ACK")
+                print_log("Sent ACK")
             else:
                 self.cosmo_socket.send(f"ERR: {cmd};".encode())
-                print(f"Sent ERR")
+                print_log(f"Sent ERR")
 
         except ValueError as e:
-            print(f"ERR: {e} \n\n CMD: <{cmd}>")
+            print_log(f"ERR: {e} \n\n CMD: <{cmd}>")
             self.cosmo_socket.send(f"ERR: {cmd};".encode())
 
 
     def cleanup(self):
             # Make sure all Relays are off, close the client socket and server socket
-            print("Shutting off Relays...")
+            print_log("Shutting off Relays...")
             for pin in RELAY_PINS:
                 GPIO.output(pin, GPIO.LOW)
             
-            print("Closing connections...")
+            print_log("Closing connections...")
             if self.cosmo_socket:
                 self.cosmo_socket.close()
             for worker_pi in self.worker_pis.values():
@@ -299,14 +304,14 @@ class ControllerServer:
                 self.server_socket.close()
         
             GPIO.cleanup()
-            print("Cleanup complete.")
+            print_log("Cleanup complete.")
 
 
     def main(self):
-        print(f"{'='*50}\n{'='*50}")
+        print_log(f"{'='*50}\n{'='*50}")
         # with Sender.from_conf(conf) as sender:
-        # print("Connected to Questdb")
-        # print(f"{'='*50}")
+        # print_log("Connected to Questdb")
+        # print_log(f"{'='*50}")
         try:
             self.wait_for_connections()
             
@@ -315,22 +320,22 @@ class ControllerServer:
 
                 # If there's no data, break the loop
                 if not msg:
-                    print("No data received from COSMO. Closing connection.")
+                    print_log("No data received from COSMO. Closing connection.")
                     break
 
                 # Decode the received data
                 msg_str = msg.decode().strip()
                 commands = msg_str.rstrip(';').split(';')
 
-                print(f"Received Cmd: {msg_str}")
+                print_log(f"Received Cmd: {msg_str}")
                 for cmd in commands:
                     self.handle_command(cmd)
 
         except KeyboardInterrupt:
-            print("Server interrupted by user.")
+            print_log("Server interrupted by user.")
 
         # except (socket.error, ConnectionResetError, BrokenPipeError) as e:
-        #     print(f"Socket error or connection lost: {e}")
+        #     print_log(f"Socket error or connection lost: {e}")
 
         finally:
             self.cleanup()
