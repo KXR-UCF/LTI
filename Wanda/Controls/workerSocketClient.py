@@ -26,6 +26,8 @@ while not connected:
         program_time = time.time() - start_time
         print(f"{program_time:<5.2f}s Failed to connect... Attempting to connect")
         time.sleep(1)
+if connected:
+    print(f"Connected to {controller_pi_address}")
 
 try:
     while True:
