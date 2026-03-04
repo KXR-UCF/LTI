@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=lti
 WorkingDirectory=/home/lti/Production
-ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/status_server.py >> /home/lti/Production/status.out 2>&1'
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/status_server.py >> /home/lti/Production/status.log 2>&1'
 Restart=always
 RestartSec=5
 
