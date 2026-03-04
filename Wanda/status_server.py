@@ -49,12 +49,18 @@ CSS = '''
     .btn-disable { background: #343a40; }
     
     nav { display: flex; gap: 10px; margin-bottom: 0; }
-    pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre-wrap; }
+    pre { background: #ffffff; color: #000000; padding: 15px; border: 1px solid #999; border-radius: 6px; overflow-x: auto; font-size: 16px; white-space: pre-wrap; }
 </style>
 '''
 
 @app.route('/')
 def index():
+    log_btns = '<span style="color:#888">No .log files found</span>'
+    if os.path.exists(BASE_DIR):
+        files = sorted([f for f in os.listdir(BASE_DIR) if f.endswith('.log') and os.path.isfile(os.path.join(BASE_DIR, f))])
+        if files:
+            log_btns = ''.join([f'<a class="btn btn-primary" href="/file/{f}">{f}</a>' for f in files])
+
     return render_template_string(CSS + f'''
     <h1>{hostname} Dashboard</h1>
     
@@ -88,8 +94,7 @@ def index():
     <div class="card">
         <h3>Logs</h3>
         <nav>
-            <a class="btn btn-primary" href="/file/socket.out">Socket Log</a>
-            <a class="btn btn-primary" href="/file/data.out">Data Log</a>
+            {log_btns}
         </nav>
     </div>
 
