@@ -10,7 +10,7 @@ hostname = socket.gethostname().upper()
 app = Flask(__name__)
 
 BASE_DIR = '/home/lti/Production'
-SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb']
+SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb', 'status_server']
 
 CSS = '''
 <style>
@@ -172,7 +172,7 @@ def stream():
 
 @app.route('/file/<filename>')
 def file_viewer(filename):
-    if '..' in filename or filename.startswith('/'):
+    if not filename.endswith('.log'):
         return abort(400, description="Invalid filename")
 
     filepath = os.path.join(BASE_DIR, filename)
@@ -183,8 +183,10 @@ def file_viewer(filename):
     return render_template_string(CSS + '''
     <div style="margin-bottom:15px"><a href="/" class="btn btn-primary" style="display:inline-block; width:auto">Back to Dashboard</a></div>
     <div class="card">
-        <b>File:</b> {{ fn }} <br>
-        <b>Updated:</b> <span id="update-time"></span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div><b>File:</b> {{ fn }} <br><b>Updated:</b> <span id="update-time"></span></div>
+            <button onclick="clearLog()" class="btn btn-stop" style="width:auto">Clear Log</button>
+        </div>
     </div>
     <pre id="fcontent">Loading...</pre>
     <script>
@@ -197,13 +199,18 @@ def file_viewer(filename):
             document.getElementById('update-time').textContent = data.uTime;
             if (isBottom || el.scrollTop === 0) el.scrollTop = el.scrollHeight;
         }
+        async function clearLog() {
+            if(!confirm('Clear all content in ' + '{{ fn }}' + '?')) return;
+            await fetch('/clear/{{ fn }}', {method:'POST'});
+            up();
+        }
         setInterval(up, 3000); up();
     </script>
     ''', fn=filename)
 
 @app.route('/content/<filename>')
 def file_content(filename):
-    if '..' in filename or filename.startswith('/'):
+    if not filename.endswith('.log'):
         return abort(400)
 
     filepath = os.path.join(BASE_DIR, filename)
@@ -222,6 +229,18 @@ def file_content(filename):
             'content': f"Error: {str(e)}", 
             'uTime': 'N/A'
         })
+
+@app.route('/clear/<filename>', methods=['POST'])
+def clear_file(filename):
+    if '..' in filename or filename.startswith('/'):
+        return abort(400)
+    filepath = os.path.join(BASE_DIR, filename)
+    try:
+        with open(filepath, 'w') as f:
+            f.write("")
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/services')
 def services_status():
