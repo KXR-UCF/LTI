@@ -14,14 +14,42 @@ SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb']
 
 CSS = '''
 <style>
-    body { font: 14px sans-serif; max-width: 700px; margin: 2% auto; padding: 0 15px; background: #eee; }
-    .card { background: #fff; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
-    .row { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 4px 0; }
-    .v { font-family: monospace; color: blue; }
-    pre { background: #222; color: #fff; padding: 10px; overflow-x: auto; white-space: pre-wrap; }
-    nav { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn { text-decoration: none; background: #007bff; color: #fff; padding: 10px; text-align: center; border-radius: 3px; border: none; }
-    .btn:hover { filter: brightness(0.8); }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 15px; background: #f4f6f9; color: #333; }
+    .card { background: #fff; padding: 20px; margin-bottom: 20px; border: 1px solid #e1e4e8; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    h1 { margin-bottom: 1.5rem; color: #2c3e50; }
+    h3 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px; color: #555; }
+    
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; }
+    .stat-item { background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border: 1px solid #eee; }
+    .stat-label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 1.5rem; font-weight: bold; color: #007bff; font-family: monospace; }
+    
+    /* Services */
+    .svc-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; flex-wrap: wrap; gap: 10px; }
+    .svc-row:last-child { border-bottom: none; }
+    .svc-info { flex: 1; min-width: 150px; }
+    .svc-name { font-weight: 600; font-size: 1.1rem; display: block; margin-bottom: 4px; }
+    .svc-status { font-size: 0.75rem; display: inline-block; padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; }
+    .status-active { background: #d4edda; color: #155724; }
+    .status-inactive { background: #f8d7da; color: #721c24; }
+    .status-enabled { color: #666; font-size: 0.85rem; margin-left: 8px; }
+    
+    /* Buttons */
+    .btn-group { display: flex; gap: 5px; }
+    .btn { text-decoration: none; padding: 6px 12px; text-align: center; border-radius: 4px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; color: white; display: inline-block; min-width: 80px; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    
+    .btn-primary { background: #007bff; width: 100%; }
+    .btn-start { background: #28a745; }
+    .btn-stop { background: #dc3545; }
+    .btn-restart { background: #ffc107; color: #212529; }
+    .btn-enable { background: #6610f2; }
+    .btn-disable { background: #343a40; }
+    
+    nav { display: flex; gap: 10px; margin-bottom: 0; }
+    pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre-wrap; }
 </style>
 '''
 
@@ -31,11 +59,25 @@ def index():
     <h1>{hostname} Dashboard</h1>
     
     <div class="card">
-        <h3>Service Logs</h3>
-        <nav>
-            <a class="btn" href="/file/socket.out">Socket Log</a>
-            <a class="btn" href="/file/data.out">Data Log</a>
-        </nav>
+        <h3>System Status</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-label">CPU</span>
+                <span class="stat-value" id="cpu">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">RAM</span>
+                <span class="stat-value" id="memory">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Temp</span>
+                <span class="stat-value" id="temp">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Disk</span>
+                <span class="stat-value" id="disk">--</span>
+            </div>
+        </div>
     </div>
 
     <div class="card">
@@ -44,19 +86,29 @@ def index():
     </div>
 
     <div class="card">
-        <div class="row"><span>CPU</span><span class="v" id="cpu">--</span></div>
-        <div class="row"><span>RAM</span><span class="v" id="memory">--</span></div>
-        <div class="row"><span>Temp</span><span class="v" id="temp">--</span></div>
-        <div class="row"><span>Disk</span><span class="v" id="disk">--</span></div>
+        <h3>Logs</h3>
+        <nav>
+            <a class="btn btn-primary" href="/file/socket.out">Socket Log</a>
+            <a class="btn btn-primary" href="/file/data.out">Data Log</a>
+        </nav>
     </div>
 
     <script>
         const s = new EventSource('/stream');
         s.onmessage = e => {{
             const d = JSON.parse(e.data);
-            document.getElementById('cpu').textContent = d.cpu + '%';
-            document.getElementById('memory').textContent = d.memory + '%';
-            document.getElementById('temp').textContent = d.temp + '°C';
+            const cpu = document.getElementById('cpu');
+            cpu.textContent = d.cpu + '%';
+            cpu.style.color = d.cpu > 80 ? '#dc3545' : '#007bff';
+            
+            const mem = document.getElementById('memory');
+            mem.textContent = d.memory + '%';
+            mem.style.color = d.memory > 80 ? '#dc3545' : '#007bff';
+
+            const temp = document.getElementById('temp');
+            temp.textContent = d.temp + '°C';
+            temp.style.color = d.temp > 70 ? '#dc3545' : '#007bff';
+
             document.getElementById('disk').textContent = d.disk + '%';
         }};
 
@@ -64,14 +116,18 @@ def index():
             const r = await fetch('/services');
             const d = await r.json();
             document.getElementById('svc').innerHTML = d.map(s => `
-                <div class="row" style="align-items:center; padding:8px 0; flex-wrap:wrap">
-                    <div style="flex:1; min-width:120px"><b>${{s.name}}</b> <br> <small style="color:${{s.active=='active'?'green':'red'}}">${{s.active}}</small> | <small>${{s.enabled}}</small></div>
-                    <div style="display:flex; gap:4px">
-                        ${{s.active !== 'active' ? `<button onclick="sc('${{s.name}}','start')" class="btn">Start</button>` : ''}}
-                        ${{s.active === 'active' ? `<button onclick="sc('${{s.name}}','stop')" class="btn" style="background:#dc3545">Stop</button>` : ''}}
-                        <button onclick="sc('${{s.name}}','restart')" class="btn" style="background:#ffc107; color:#000">Reset</button>
-                        ${{s.enabled !== 'enabled' ? `<button onclick="sc('${{s.name}}','enable')" class="btn" style="background:#17a2b8">Enable</button>` : ''}}
-                        ${{s.enabled === 'enabled' ? `<button onclick="sc('${{s.name}}','disable')" class="btn" style="background:#6c757d">Disable</button>` : ''}}
+                <div class="svc-row">
+                    <div class="svc-info">
+                        <span class="svc-name">${{s.name}}</span>
+                        <span class="svc-status ${{s.active=='active'?'status-active':'status-inactive'}}">${{s.active}}</span>
+                        <span class="status-enabled">${{s.enabled}}</span>
+                    </div>
+                    <div class="btn-group">
+                        ${{s.active !== 'active' ? `<button onclick="sc('${{s.name}}','start')" class="btn btn-start">Start</button>` : ''}}
+                        ${{s.active === 'active' ? `<button onclick="sc('${{s.name}}','stop')" class="btn btn-stop">Stop</button>` : ''}}
+                        <button onclick="sc('${{s.name}}','restart')" class="btn btn-restart">Restart</button>
+                        ${{s.enabled !== 'enabled' ? `<button onclick="sc('${{s.name}}','enable')" class="btn btn-enable">Enable</button>` : ''}}
+                        ${{s.enabled === 'enabled' ? `<button onclick="sc('${{s.name}}','disable')" class="btn btn-disable">Disable</button>` : ''}}
                     </div>
                 </div>
             `).join('');
@@ -111,13 +167,16 @@ def stream():
 
 @app.route('/file/<filename>')
 def file_viewer(filename):
+    if '..' in filename or filename.startswith('/'):
+        return abort(400, description="Invalid filename")
+
     filepath = os.path.join(BASE_DIR, filename)
     
     if not os.path.exists(filepath):
         return abort(404, description=f"File {filename} not found in {BASE_DIR}")
         
     return render_template_string(CSS + '''
-    <div style="margin-bottom:15px"><a href="/" class="btn" style="display:inline-block; width:auto">Back to Dashboard</a></div>
+    <div style="margin-bottom:15px"><a href="/" class="btn btn-primary" style="display:inline-block; width:auto">Back to Dashboard</a></div>
     <div class="card">
         <b>File:</b> {{ fn }} <br>
         <b>Updated:</b> <span id="update-time"></span>
@@ -127,8 +186,11 @@ def file_viewer(filename):
         async function up() {
             const response = await fetch('/content/{{ fn }}');
             const data = await response.json();
-            document.getElementById('fcontent').textContent = data.content;
+            const el = document.getElementById('fcontent');
+            const isBottom = el.scrollHeight - el.scrollTop === el.clientHeight;
+            el.textContent = data.content;
             document.getElementById('update-time').textContent = data.uTime;
+            if (isBottom || el.scrollTop === 0) el.scrollTop = el.scrollHeight;
         }
         setInterval(up, 3000); up();
     </script>
@@ -136,6 +198,9 @@ def file_viewer(filename):
 
 @app.route('/content/<filename>')
 def file_content(filename):
+    if '..' in filename or filename.startswith('/'):
+        return abort(400)
+
     filepath = os.path.join(BASE_DIR, filename)
     try:
         with open(filepath, 'r') as f:
