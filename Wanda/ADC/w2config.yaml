@@ -1,0 +1,47 @@
+ADC1:
+  enabled: true
+  differential: true
+  gain: "GAIN_64"
+  data_rate: "3750SPS"
+  RST_PIN: 24
+  CS_PIN: 8        
+  DRDY_PIN: 22
+  channels:
+    0: "lc1"
+    1: "lc2"
+    2: "lc3"
+    3: "lc4"
+
+ADC2:
+  enabled: true
+  differential: true
+  gain: "GAIN_1"
+  data_rate: "3750SPS"
+  RST_PIN: 25
+  CS_PIN: 7 
+  DRDY_PIN: 23
+  channels:
+    0: "tc1"
+    1: "tc2"
+    2: null
+    3: null
+
+sensors:
+  lc1:
+    zero: 1.3445
+    scale: 123991
+  lc2:
+    zero: 8.8317
+    scale: 122197
+  lc3:
+    zero: 10.581
+    scale: 123989
+  lc4:
+    zero: 10.644
+    scale: 120001
+  tc1:
+    zero: 286.4816
+    scale: 25550
+  tc2:
+    zero: 286.4816  # celius 0: 3.4816
+    scale: 25550
