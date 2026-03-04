@@ -4,11 +4,13 @@ import time
 import json
 import os
 import socket
+import subprocess
 
-hostname = socket.gethostname()
+hostname = socket.gethostname().upper()
 app = Flask(__name__)
 
 BASE_DIR = '/home/lti/Production'
+SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb']
 
 CSS = '''
 <style>
@@ -18,8 +20,8 @@ CSS = '''
     .v { font-family: monospace; color: blue; }
     pre { background: #222; color: #fff; padding: 10px; overflow-x: auto; white-space: pre-wrap; }
     nav { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn { text-decoration: none; background: #007bff; color: #fff; padding: 10px; text-align: center; border-radius: 3px; }
-    .btn:hover { background: #0056b3; }
+    .btn { text-decoration: none; background: #007bff; color: #fff; padding: 10px; text-align: center; border-radius: 3px; border: none; }
+    .btn:hover { filter: brightness(0.8); }
 </style>
 '''
 
@@ -29,7 +31,7 @@ def index():
     <h1>{hostname} Dashboard</h1>
     
     <div class="card">
-        <h3>Process Logs</h3>
+        <h3>Service Logs</h3>
         <nav>
             <a class="btn" href="/file/socket.out">Socket Log</a>
             <a class="btn" href="/file/data.out">Data Log</a>
@@ -37,17 +39,50 @@ def index():
     </div>
 
     <div class="card">
+        <h3>Services</h3>
+        <div id="svc">Loading...</div>
+    </div>
+
+    <div class="card">
         <div class="row"><span>CPU</span><span class="v" id="cpu">--</span></div>
         <div class="row"><span>RAM</span><span class="v" id="memory">--</span></div>
         <div class="row"><span>Temp</span><span class="v" id="temp">--</span></div>
+        <div class="row"><span>Disk</span><span class="v" id="disk">--</span></div>
     </div>
 
     <script>
         const s = new EventSource('/stream');
         s.onmessage = e => {{
             const d = JSON.parse(e.data);
-            ['cpu','memory','temp'].forEach(k => document.getElementById(k).textContent = d[k] + (k=='temp'?'°C':'%'));
+            document.getElementById('cpu').textContent = d.cpu + '%';
+            document.getElementById('memory').textContent = d.memory + '%';
+            document.getElementById('temp').textContent = d.temp + '°C';
+            document.getElementById('disk').textContent = d.disk + '%';
         }};
+
+        async function loadSvc() {{
+            const r = await fetch('/services');
+            const d = await r.json();
+            document.getElementById('svc').innerHTML = d.map(s => `
+                <div class="row" style="align-items:center; padding:8px 0; flex-wrap:wrap">
+                    <div style="flex:1; min-width:120px"><b>${{s.name}}</b> <br> <small style="color:${{s.active=='active'?'green':'red'}}">${{s.active}}</small> | <small>${{s.enabled}}</small></div>
+                    <div style="display:flex; gap:4px">
+                        ${{s.active !== 'active' ? `<button onclick="sc('${{s.name}}','start')" class="btn">Start</button>` : ''}}
+                        ${{s.active === 'active' ? `<button onclick="sc('${{s.name}}','stop')" class="btn" style="background:#dc3545">Stop</button>` : ''}}
+                        <button onclick="sc('${{s.name}}','restart')" class="btn" style="background:#ffc107; color:#000">Reset</button>
+                        ${{s.enabled !== 'enabled' ? `<button onclick="sc('${{s.name}}','enable')" class="btn" style="background:#17a2b8">Enable</button>` : ''}}
+                        ${{s.enabled === 'enabled' ? `<button onclick="sc('${{s.name}}','disable')" class="btn" style="background:#6c757d">Disable</button>` : ''}}
+                    </div>
+                </div>
+            `).join('');
+        }}
+        async function sc(n, a) {{
+            if(!confirm(a.toUpperCase() + ' ' + n + '?')) return;
+            await fetch('/control/'+n+'/'+a, {{method:'POST'}});
+            setTimeout(loadSvc, 1000);
+        }}
+        loadSvc();
+        setInterval(loadSvc, 5000);
     </script>
     ''')
 
@@ -66,7 +101,8 @@ def stream():
             data = {
                 'cpu': psutil.cpu_percent(), 
                 'memory': psutil.virtual_memory().percent, 
-                'temp': t
+                'temp': t,
+                'disk': psutil.disk_usage('/').percent
             }
             yield f"data: {json.dumps(data)}\n\n"
             time.sleep(2)
@@ -84,15 +120,15 @@ def file_viewer(filename):
     <div style="margin-bottom:15px"><a href="/" class="btn" style="display:inline-block; width:auto">Back to Dashboard</a></div>
     <div class="card">
         <b>File:</b> {{ fn }} <br>
-        <b>Updated:</b> <span id="m"></span>
+        <b>Updated:</b> <span id="update-time"></span>
     </div>
-    <pre id="o">Loading...</pre>
+    <pre id="fcontent">Loading...</pre>
     <script>
         async function up() {
-            const r = await fetch('/content/{{ fn }}');
-            const d = await r.json();
-            document.getElementById('o').textContent = d.c;
-            document.getElementById('m').textContent = d.m;
+            const response = await fetch('/content/{{ fn }}');
+            const data = await response.json();
+            document.getElementById('fcontent').textContent = data.content;
+            document.getElementById('update-time').textContent = data.uTime;
         }
         setInterval(up, 3000); up();
     </script>
@@ -105,9 +141,41 @@ def file_content(filename):
         with open(filepath, 'r') as f:
             content = f.read()[-20000:]
             if not content: content = "[Empty File]"
-        return jsonify({'c': content, 'm': time.ctime(os.path.getmtime(filepath))})
+
+        return jsonify({
+            'content': content, 
+            'uTime': time.ctime(os.path.getmtime(filepath))
+        })
+    
     except Exception as e:
-        return jsonify({'c': f'Error: {str(e)}', 'm': 'N/A'})
+        return jsonify({
+            'content': f"Error: {str(e)}", 
+            'uTime': 'N/A'
+        })
+
+@app.route('/services')
+def services_status():
+    res = []
+    for s in SERVICES:
+        try:
+            p = subprocess.run(['systemctl', 'is-active', s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            active = p.stdout.strip()
+            p2 = subprocess.run(['systemctl', 'is-enabled', s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            enabled = p2.stdout.strip()
+            res.append({'name': s, 'active': active, 'enabled': enabled})
+        except Exception as e:
+            res.append({'name': s, 'active': 'error', 'enabled': str(e)})
+    return jsonify(res)
+
+@app.route('/control/<service>/<action>', methods=['POST'])
+def service_control(service, action):
+    if service not in SERVICES: return abort(400)
+    if action not in ['start', 'stop', 'restart', 'enable', 'disable']: return abort(400)
+    try:
+        subprocess.run(['sudo', 'systemctl', action, service], check=True)
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 if __name__ == '__main__':
     if not os.path.exists(BASE_DIR):
