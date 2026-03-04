@@ -1,5 +1,13 @@
+blinker
+click
+Flask
+itsdangerous
+Jinja2
+lgpio
+MarkupSafe
 numpy
 pandas
+psutil
 python-dateutil
 pytz
 PyYAML
@@ -8,3 +16,4 @@ rpi-lgpio
 six
 spidev
 tzdata
+Werkzeug
