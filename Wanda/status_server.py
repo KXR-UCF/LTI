@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, Response, jsonify, abort, request
+from flask import Flask, render_template_string, Response, jsonify, abort, request, send_file
 import psutil 
 import time
 import json
@@ -65,9 +65,9 @@ def index():
             dirs[:] = [d for d in dirs if not d.startswith('.')]
             for f in files:
                 rel_path = os.path.relpath(os.path.join(root, f), BASE_DIR).replace('\\', '/')
-                if f.endswith(('.log', '.out', '.err', '.txt')):
+                if f.endswith(('.log')):
                     logs.append(rel_path)
-                elif f.endswith(('.yaml', '.yml', '.json', '.conf', '.ini')):
+                elif f.endswith(('.yaml')):
                     cfgs.append(rel_path)
         
         logs.sort()
@@ -152,7 +152,10 @@ def index():
             temp.textContent = d.temp + '°C';
             temp.style.color = d.temp > 70 ? '#dc3545' : '#007bff';
 
-            document.getElementById('disk').textContent = d.disk + '%';
+            const disk = document.getElementById('disk');
+            disk.textContent = d.disk + '%';
+            disk.style.color = d.disk > 90 ? '#dc3545' : '#007bff';
+
             document.getElementById('uptime').textContent = d.uptime;
         }};
 
@@ -224,7 +227,7 @@ def stream():
 
 @app.route('/file/<path:filename>')
 def file_viewer(filename):
-    allowed = ('.log', '.out', '.err', '.txt', '.yaml', '.yml', '.json', '.conf', '.ini')
+    allowed = ('.log', '.yaml')
     if not filename.endswith(allowed) or '..' in filename or filename.startswith('/'):
         return abort(400, description="Invalid filename")
 
@@ -233,7 +236,7 @@ def file_viewer(filename):
     if not os.path.exists(filepath):
         return abort(404, description=f"File {filename} not found in {BASE_DIR}")
         
-    is_config = filename.endswith(('.yaml', '.yml', '.json', '.conf', '.ini'))
+    is_config = filename.endswith(('.yaml'))
 
     if is_config:
         return render_template_string(CSS + '''
@@ -241,7 +244,10 @@ def file_viewer(filename):
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div><b>Editing Config:</b> {{ fn }}</div>
-                <button onclick="saveFile()" class="btn btn-start" style="width:auto">Save Changes</button>
+                <div class="btn-group">
+                    <a href="/download/{{ fn }}" class="btn btn-enable" style="width:auto">Download</a>
+                    <button onclick="saveFile()" class="btn btn-start" style="width:auto">Save Changes</button>
+                </div>
             </div>
         </div>
         <textarea id="fcontent" style="width:100%; height:600px; font-family:monospace; padding:10px; border:1px solid #ddd; border-radius:4px; resize:vertical; background:#f8f9fa; color:#333"></textarea>
@@ -272,7 +278,10 @@ def file_viewer(filename):
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div><b>File:</b> {{ fn }} <br><b>Updated:</b> <span id="update-time"></span></div>
-                <button onclick="clearLog()" class="btn btn-stop" style="width:auto">Clear Log</button>
+                <div class="btn-group">
+                    <a href="/download/{{ fn }}" class="btn btn-enable" style="width:auto">Download</a>
+                    <button onclick="clearLog()" class="btn btn-stop" style="width:auto">Clear Log</button>
+                </div>
             </div>
         </div>
         <pre id="fcontent">Loading...</pre>
@@ -297,7 +306,7 @@ def file_viewer(filename):
 
 @app.route('/content/<path:filename>')
 def file_content(filename):
-    allowed = ('.log', '.out', '.err', '.txt', '.yaml', '.yml', '.json', '.conf', '.ini')
+    allowed = ('.log', '.yaml')
     if not filename.endswith(allowed) or '..' in filename or filename.startswith('/'):
         return abort(400)
 
@@ -322,7 +331,7 @@ def file_content(filename):
 def save_file(filename):
     if '..' in filename or filename.startswith('/'):
         return abort(400)
-    if not filename.endswith(('.yaml', '.yml', '.json', '.conf', '.ini')):
+    if not filename.endswith(('.yaml')):
         return abort(403)
 
     filepath = os.path.join(BASE_DIR, filename)
@@ -334,11 +343,24 @@ def save_file(filename):
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/download/<path:filename>')
+def download_file(filename):
+    if '..' in filename or filename.startswith('/'):
+        return abort(400)
+    if not filename.endswith(('.log', '.yaml')):
+        return abort(403)
+    
+    filepath = os.path.join(BASE_DIR, filename)
+    if not os.path.exists(filepath):
+        return abort(404)
+        
+    return send_file(filepath, as_attachment=True)
+
 @app.route('/clear/<path:filename>', methods=['POST'])
 def clear_file(filename):
     if '..' in filename or filename.startswith('/'):
         return abort(400)
-    if not filename.endswith(('.log', '.out', '.err', '.txt')):
+    if not filename.endswith(('.log')):
         return abort(403)
 
     filepath = os.path.join(BASE_DIR, filename)
