@@ -10,6 +10,15 @@ import numpy as np
 import yaml
 import os
 
+from datetime import datetime
+from pytz import timezone
+est = timezone('US/Eastern')
+
+def print_log(message:str):
+    lines = message.split('\n')
+    for line in lines:
+        print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S')}] {line}")
+
 module_path = os.path.abspath(__file__)
 module_directory = os.path.dirname(module_path)
 
@@ -23,7 +32,7 @@ ADC1_ENABLED = config["ADC1"]["enabled"]
 ADC2_ENABLED = config["ADC2"]["enabled"]
     
 if not (ADC1_ENABLED or ADC2_ENABLED):
-    print("---No ADC Enabled---")
+    print_log("---No ADC Enabled---")
     exit()
 
 if ADC1_ENABLED:
@@ -47,7 +56,7 @@ for adc in ENABLED_ADCS:
     if not config[f"ADC{adc}"]["differential"]:
         new_ADC.setMode(0)
     _ADCs[adc] = (new_ADC)
-    print(f"ADC{adc} Initialized")
+    print_log(f"ADC{adc} Initialized")
 
 
 class Sensor:
@@ -74,7 +83,7 @@ class Sensor:
 
                 attached_device_name = config[f"ADC{adc_id}"]["channels"][channel_id]
                 
-                # print(f"{attached_device_name}\t{sensor_name}")
+                # print_log(f"{attached_device_name}\t{sensor_name}")
 
 
                 # filter for sensors of sensor type and create a list of them
@@ -84,19 +93,19 @@ class Sensor:
                     sensor_found = True
 
         if not sensor_found:
-            print(f"Error: No Sensor with name: {sensor_name} found --> Check config file {CONFIG_FILE_NAME}")
+            print_log(f"Error: No Sensor with name: {sensor_name} found --> Check config file {CONFIG_FILE_NAME}")
             return
             # might raise some exception here
 
         self.zero = config["sensors"][sensor_name]["zero"]
         if self.zero == None:
             self.zero = 0
-            print(f"Warning no zero set for sensor <{self.name}> check config file")
+            print_log(f"Warning no zero set for sensor <{self.name}> check config file")
 
         self.scale = config["sensors"][sensor_name]["scale"]
         if self.scale == None:
             self.scale = 1
-            print(f"Warning no scale set for sensor <{self.name}> check config file")
+            print_log(f"Warning no scale set for sensor <{self.name}> check config file")
 
     def get_voltage(self) -> float:
         """Gets the voltages of a sensor
@@ -124,12 +133,12 @@ class Sensor:
     #         num_samples (int): number of samples to average for the tare
     #     """
     #     sample_arr = np.array([])
-    #     print(f"Load Cell <{self.name}> Calibrating Tare")
+    #     print_log(f"Load Cell <{self.name}> Calibrating Tare")
     #     self.tare = 0
     #     for i in range(num_samples):
     #         sample_arr = np.append(sample_arr, self.get_force())
     #     self.set_tare(-1 * np.mean(sample_arr))
-    #     print(f"Load Cell <{self.name}> Tare Calibrated")
+    #     print_log(f"Load Cell <{self.name}> Tare Calibrated")
 
     # def write_tare_to_config(self):
     #     """Writes the tare to the config file"""

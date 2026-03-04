@@ -4,16 +4,23 @@ from ADC import adcmanager
 
 import numpy as np
 from questdb.ingress import Sender, Protocol, TimestampNanos
-from datetime import datetime
 
 import time
 import socket
 
-hostname = socket.gethostname()
-
 from datetime import datetime
 from pytz import timezone
 est = timezone('US/Eastern')
+
+def print_log(message:str):
+    lines = message.split('\n')
+    for line in lines:
+        print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S')}] {line}")
+
+hostname = socket.gethostname()
+
+TARGET_RPS = 100
+SAMPLE_INTERVAL = 1.0 / TARGET_RPS
 
 conf = (
     'tcp::addr=192.168.1.32:9009;'
@@ -47,9 +54,10 @@ try:
         sender.row(table_name=hostname, at=datetime.now())
 
         # st = time.time()
-        print("Connected to QuestDB")
+        print_log("Connected to QuestDB")
         start_time = time.time()
-        print("Sending Data")
+        next_sample_time = start_time
+        print_log("Sending Data")
         while True:
             loop_start = time.time()
 
@@ -83,19 +91,25 @@ try:
             
             # get time stats
             current_time = time.time()
-            if current_time - last_report_time > 1:
+            if current_time - last_report_time > 20:
                 total_RPS = row_count / (current_time - start_time)
-                print(f"Rate: {total_RPS:.1f} RPS")
+                print_log(f"Rate: {total_RPS:.1f} RPS")
                 last_report_time = current_time
+            
+            # Rate limiting
+            next_sample_time += SAMPLE_INTERVAL
+            sleep_time = next_sample_time - time.time()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
             
             loop_times.append(time.time() - loop_start)
 
 
 except KeyboardInterrupt:
-    print("Program interuppted by user")
+    print_log("Program interuppted by user")
 
 except Exception as e:
-    print(f"Unexpected error: {e}")
+    print_log(f"Unexpected error: {e}")
     import traceback
     traceback.print_exc()
 
@@ -107,14 +121,12 @@ finally:
          avg_questdb = np.mean(questdb_times)
          avg_loop = np.mean(loop_times)
 
-         print(f"{'='*60}")
-         print(f"{'Total Samples':<15} {row_count}")
-         print(f"{'Total Time':<15} {total_elapsed:.0f} s")
-         print(f"{'Total Rate:':<15} {final_RPS:.0f} RPS")
-         print(f"{'='*60}")
-         print(f"{'ADC overhead:':<15} {100*avg_adc/avg_loop:.0f}%")
-         print(f"{'QuestDB overhead:':<15} {100*avg_questdb/avg_loop:.0f}%")
-         print(f"{'My overhead:':<15} {100*(1-(avg_adc+avg_questdb)/avg_loop):.0f}%")
-         print(f"{'='*60}")
-
-
+         print_log(f"{'='*60}")
+         print_log(f"{'Total Samples':<15} {row_count}")
+         print_log(f"{'Total Time':<15} {total_elapsed:.0f} s")
+         print_log(f"{'Total Rate:':<15} {final_RPS:.0f} RPS")
+         print_log(f"{'='*60}")
+         print_log(f"{'ADC overhead:':<15} {100*avg_adc/avg_loop:.0f}%")
+         print_log(f"{'QuestDB overhead:':<15} {100*avg_questdb/avg_loop:.0f}%")
+         print_log(f"{'My overhead:':<15} {100*(1-(avg_adc+avg_questdb)/avg_loop):.0f}%")
+         print_log(f"{'='*60}")

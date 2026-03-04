@@ -2,6 +2,15 @@ import RPi.GPIO as GPIO
 import socket
 import time
 
+from datetime import datetime
+from pytz import timezone
+est = timezone('US/Eastern')
+
+def print_log(message:str):
+    lines = message.split('\n')
+    for line in lines:
+        print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S')}] {line}")
+
 # numbered in order 1-8
 RELAY_PINS = [5, 6, 13, 16, 19, 20, 21, 26]
 
@@ -17,17 +26,17 @@ start_time = time.time()
 controller_pi_address = "192.168.1.30"
 controller_pi_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 connected = False
-print(f"Attempting to connect to {controller_pi_address}")
+print_log(f"Attempting to connect to {controller_pi_address}")
 while not connected:
     try:
         controller_pi_socket.connect((controller_pi_address, 9600))
         connected = True
     except OSError as e:
         program_time = time.time() - start_time
-        print(f"{program_time:<5.2f}s Failed to connect... Attempting to connect")
+        print_log(f"{program_time:<5.2f}s Failed to connect... Attempting to connect")
         time.sleep(1)
 if connected:
-    print(f"Connected to {controller_pi_address}")
+    print_log(f"Connected to {controller_pi_address}")
 
 try:
     while True:
@@ -36,13 +45,13 @@ try:
         
         # If there's no data, break the loop
         if not msg:
-            print("No data received. Closing connection.")
+            print_log("No data received. Closing connection.")
             break
         
         # splits message into each command
         cmds = msg.rstrip(';').split(';')
         for cmd in cmds:
-            print(f"Recieved CMD: <{cmd}>")
+            print_log(f"Recieved CMD: <{cmd}>")
             success = False
             err_msg = ""
 
@@ -81,22 +90,22 @@ try:
                 err_msg = e
             
             if success:
-                print(f"Sending ACK\n")
+                print_log(f"Sending ACK\n")
                 controller_pi_socket.send(f"ACK: {msg}".encode())
             else:
-                print(f"Sending ERR\n")
+                print_log(f"Sending ERR\n")
                 controller_pi_socket.send(f"ERR: {msg},{err_msg}".encode())
 
 except KeyboardInterrupt:
-    print("Interrupted by user")
+    print_log("Interrupted by user")
 
 except (socket.error, ConnectionResetError, BrokenPipeError) as e:
-    print(f"Socket error or connection lost: {e}")
+    print_log(f"Socket error or connection lost: {e}")
 
 finally:
-    print("Shutting off Relays...")
+    print_log("Shutting off Relays...")
     for pin in RELAY_PINS:
         GPIO.output(pin, GPIO.LOW)
     
-    print("Closing connection...")
+    print_log("Closing connection...")
     controller_pi_socket.close()
