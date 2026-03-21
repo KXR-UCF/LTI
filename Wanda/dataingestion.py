@@ -7,6 +7,10 @@ from questdb.ingress import Sender, Protocol, TimestampNanos
 
 import time
 import socket
+import json
+import requests
+import threading
+import queue
 
 from datetime import datetime
 from pytz import timezone
@@ -28,6 +32,33 @@ conf = (
     'auto_flush_interval=100;'
     # 'auto_flush_rows=2;'
 )
+
+GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/{hostname}"
+with open("grafana.key", 'r') as grafana_key_file:
+    GRAFANA_TOKEN = grafana_key_file.read().strip()
+
+# Setup HTTP Session to keep the connection alive at 100Hz
+grafana_session = requests.Session()
+grafana_session.headers.update({
+    "Authorization": f"Bearer {GRAFANA_TOKEN}",
+    "Content-Type": "text/plain"
+})
+
+# Worker thread to handle Grafana posts asynchronously
+# grafana_queue = queue.Queue(maxsize=50)
+
+# def grafana_worker():
+#     while True:
+#         payload = grafana_queue.get()
+#         try:
+#             response = grafana_session.post(GRAFANA_URL, data=payload, timeout=0.5)
+#             if not response.ok:
+#                 print_log(f"Grafana Error {response.status_code}: {response.text} | Payload: {payload}")
+#         except requests.exceptions.Timeout:
+#             print_log("Grafana connection timed out.")
+#         except Exception as e:
+#             print_log(f"Network/Connection Error: {e}")
+# threading.Thread(target=grafana_worker, daemon=True).start()
 
 sensors = []
 for sensor_name in adcmanager.config["sensors"]:
@@ -76,6 +107,19 @@ try:
 
             # save time to get data this iteration
             adc_times.append(time.time() - adc_start)
+
+            try:
+                fields = [f"{key}={value}" for key, value in columns.items()]
+                fields_str = ','.join(fields)
+                timestamp_ns = time.time_ns()
+                live_payload = f"sensors,host={hostname} {fields_str} {timestamp_ns}"
+                # grafana_queue.put_nowait(live_payload)
+                grafana_session.post(GRAFANA_URL, data=live_payload, timeout=0.001)
+            # except queue.Full:
+            #     print_log("Grafana queue full - dropping data")
+            except Exception as e:
+                # print_log(f"Error preparing Grafana payload: {e}")
+                pass
 
             # send data and time to questDB
             questdb_start = time.time()
