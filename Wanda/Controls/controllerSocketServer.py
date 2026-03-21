@@ -4,7 +4,7 @@ import time
 import socket
 import os
 
-# from questdb.ingress import Sender, Protocol
+from questdb.ingress import Sender, Protocol
 from datetime import datetime
 from pytz import timezone
 est = timezone('US/Eastern')
@@ -18,13 +18,11 @@ class WorkerPi:
         self.ip_address = client_ip_address
         self.socket = client_socket
 
-# conf = (
-#     'http::addr=localhost:9000;'
-#     'username=admin;'
-#     'password=quest;'
-#     'auto_flush=on;'
-#     'auto_flush_rows=1;'
-#     )
+conf = (
+    'tcp::addr=192.168.1.32:9009;'
+    'auto_flush=on;'
+    'auto_flush_rows=1;'
+)
 
 # constants
 RELAY_PINS = [5, 6, 13, 16, 19, 20, 21, 26]
@@ -37,7 +35,7 @@ CONFIG_FILE_NAME = "config.yaml"
 def print_log(message:str):
     lines = message.split('\n')
     for line in lines:
-        print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S')}] {line}")
+        print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] {line}")
 
 class ControllerServer:
     def __init__(self):
@@ -50,10 +48,22 @@ class ControllerServer:
         self.worker_pis = {}
         self.cosmo_socket = None
         self.cosmo_address = None
-        self.switch_states = {}
+        
+        self.switch_states = {self._format_col_name(switch_id): False for switch_id in self.switch_map.keys()}
+        self.switch_states['ENABLE_FIRE'] = False
+        self.switch_states['FIRE'] = False
+        self.switch_states['ABORT'] = False
+        self.sender = None
+
         self.abort = False
 
         self.override_manager = OverrideManager(self)
+
+    def _format_col_name(self, switch_id):
+        s = str(switch_id).replace(' ', '_')
+        if s.isdigit():
+            return f"switch_{s}"
+        return s
 
 
     def load_config(self):
@@ -198,8 +208,8 @@ class ControllerServer:
 
         # handle enable fire 
         elif cmd_lower == "enable fire" or cmd_lower == "disable fire":
-            switch_id = cmd_lower
-            state = (cmd_lower == "enable fire".lower())
+            switch_id = "ENABLE FIRE"
+            state = (cmd_lower == "enable fire")
 
         # handle fire
         elif cmd_lower == "fire":
@@ -241,6 +251,26 @@ class ControllerServer:
         # return success and target_state == state
         # print_log(f"[DEBUG: end of set relay: sucess: {success}]")
         return success
+    
+    
+    def post_status_to_questdb(self, switch_id, target_state):
+        if self.abort:
+            for k in self.switch_states:
+                self.switch_states[k] = False
+            self.switch_states['ABORT'] = True
+        else:
+            formatted_switch_id = self._format_col_name(switch_id)
+            self.switch_states[formatted_switch_id] = target_state
+        
+        if self.sender is not None:
+            try:
+                self.sender.row('controls', columns=self.switch_states, at=datetime.now(tz=est))
+                self.sender.flush()
+                print_log("Posted status to QuestDB")
+            except Exception as e:
+                print_log(f"QuestDB Error: {e}")
+
+        pass
 
 
     def handle_command(self, cmd: str):
@@ -277,7 +307,7 @@ class ControllerServer:
 
             # respond to COSMO
             if success:
-                self.switch_states[switch_id] = target_state
+                self.post_status_to_questdb(switch_id, target_state)
                 self.cosmo_socket.send(f"ACK: {cmd};".encode())
                 print_log("Sent ACK")
             else:
@@ -302,34 +332,102 @@ class ControllerServer:
                 worker_pi.socket.close()
             if self.server_socket:
                 self.server_socket.close()
+            if self.sender is not None:
+                try:
+                    self.sender.close()
+                except Exception:
+                    pass
         
             GPIO.cleanup()
             print_log("Cleanup complete.")
 
+    def hold(self):
+        print_log("Applying hold positions to all relays due to disconnect...")
+        for pi_id, pi_data in self.config["PIs"].items():
+            if pi_data["enabled"]:
+                for relay_id, relay_data in pi_data["relays"].items():
+                    hold_state = relay_data.get("hold_position", False)
+                    switch_id = relay_data.get("switch")
+                    success = self.set_relay(pi_id, relay_id, hold_state)
+                    if success and switch_id is not None:
+                        self.post_status_to_questdb(switch_id, hold_state)
+
+    def reconnect_cosmo(self, timeout_seconds=300):
+            print_log(f"Attempting to reconnect to COSMO")
+            if self.cosmo_socket:
+                try:
+                    self.cosmo_socket.close()
+                except Exception:
+                    pass
+                self.cosmo_socket = None
+
+            start_time = time.time()
+            self.server_socket.settimeout(1.0)  # sets time step to check timer
+
+            while time.time() - start_time < timeout_seconds:
+                try:
+                    client_socket, client_address = self.server_socket.accept()
+                    ip = client_address[0]
+                    
+                    if ip == self.config["COSMO"]["ip"]:
+                        self.cosmo_socket = client_socket
+                        self.cosmo_address = client_address
+                        self.server_socket.settimeout(None)
+                        print_log("COSMO Reconnected successfully!")
+                        return True
+                    else:
+                        print_log(f"Unexpected connection from {ip} during COSMO reconnect. Closing.")
+                        client_socket.close()
+                        
+                except socket.timeout:
+                    pass
+                
+                except Exception as e:
+                    print_log(f"Error accepting connection during reconnect: {e}")
+                    time.sleep(1)
+
+            self.server_socket.settimeout(None)
+            print_log("Reconnect timeout expired. Proceeding to shutdown.")
+            return False
+
 
     def main(self):
         print_log(f"{'='*50}\n{'='*50}")
-        # with Sender.from_conf(conf) as sender:
-        # print_log("Connected to Questdb")
-        # print_log(f"{'='*50}")
+        try:
+            self.sender = Sender.from_conf(conf).__enter__()
+            print_log("Connected to Questdb")
+        except Exception as e:
+            print_log(f"Warning: Could not connect to QuestDB: {e}. Running without database.")
+            self.sender = None
+            
+        print_log(f"{'='*50}")
         try:
             self.wait_for_connections()
             
             while True:
-                msg = self.cosmo_socket.recv(1024)
+                try:
+                    msg = self.cosmo_socket.recv(1024)
 
-                # If there's no data, break the loop
-                if not msg:
-                    print_log("No data received from COSMO. Closing connection.")
-                    break
+                    # If there's no data, break the loop
+                    if not msg:
+                        print_log("No data received from COSMO. Reconnecting...")
+                        self.hold()
+                        if not self.reconnect_cosmo(): break
 
-                # Decode the received data
-                msg_str = msg.decode().strip()
-                commands = msg_str.rstrip(';').split(';')
+                        continue
 
-                print_log(f"Received Cmd: {msg_str}")
-                for cmd in commands:
-                    self.handle_command(cmd)
+                    # Decode the received data
+                    msg_str = msg.decode().strip()
+                    commands = msg_str.rstrip(';').split(';')
+
+                    print_log(f"Received Cmd: {msg_str}")
+                    for cmd in commands:
+                        self.handle_command(cmd)
+
+                except (socket.error, ConnectionResetError, BrokenPipeError) as e:
+                    print_log(f"Socket error with COSMO: {e}")
+                    self.hold()
+                    if not self.reconnect_cosmo(): break
 
         except KeyboardInterrupt:
             print_log("Server interrupted by user.")
@@ -344,13 +442,3 @@ class ControllerServer:
 if __name__ == '__main__':
     server = ControllerServer()
     server.main()
-
-
-
-                # sender.row(
-                #     'controls_data',
-                #     columns = {
-                #         str(switch): switch_states[switch] for switch in switch_states
-                #     },
-                #     at=datetime.now()
-                # )
