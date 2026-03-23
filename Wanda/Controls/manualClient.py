@@ -45,7 +45,12 @@ def main():
                 s.send(cmd.encode())
                 
     except KeyboardInterrupt:
-        pass
+        try:
+            s.send(b"SHUTDOWN;")
+            response_msg = s.recv(1024).decode().strip()
+            print(f"Received Response: {response_msg}")
+        except Exception:
+            pass
     finally:
         s.close()
 

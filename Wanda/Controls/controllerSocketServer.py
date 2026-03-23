@@ -50,7 +50,7 @@ class ControllerServer:
         self.cosmo_address = None
         
         self.switch_states = {self._format_col_name(switch_id): False for switch_id in self.switch_map.keys()}
-        self.switch_states['ENABLE_FIRE'] = False
+        self.switch_states['FIRE_KEY'] = False
         self.switch_states['FIRE'] = False
         self.switch_states['ABORT'] = False
         self.sender = None
@@ -208,7 +208,7 @@ class ControllerServer:
 
         # handle enable fire 
         elif cmd_lower == "enable fire" or cmd_lower == "disable fire":
-            switch_id = "ENABLE FIRE"
+            switch_id = "FIRE KEY"
             state = (cmd_lower == "enable fire")
 
         # handle fire
@@ -296,7 +296,7 @@ class ControllerServer:
                             self.set_relay(pi_id, relay_id, target_state) # shut off each relay
 
             elif str(switch_id).lower() in OverrideManager.OVERRIDDEN_CMDS:
-                success = success and self.override_manager.process_command(switch_id)
+                success = success and self.override_manager.process_command(switch_id, target_state)
 
             else:
                 for relay_data in target_relays:
@@ -346,7 +346,11 @@ class ControllerServer:
         for pi_id, pi_data in self.config["PIs"].items():
             if pi_data["enabled"]:
                 for relay_id, relay_data in pi_data["relays"].items():
+
                     hold_state = relay_data.get("hold_position", False)
+                    if hold_state is None:
+                        continue
+                    
                     switch_id = relay_data.get("switch")
                     success = self.set_relay(pi_id, relay_id, hold_state)
                     if success and switch_id is not None:
@@ -416,8 +420,14 @@ class ControllerServer:
 
                         continue
 
+
                     # Decode the received data
                     msg_str = msg.decode().strip()
+
+                    if msg_str in ['SHUTDOWN', 'SHUTDOWN;']:
+                        print_log("SHUTDOWN command received. Exiting...")
+                        break
+
                     commands = msg_str.rstrip(';').split(';')
 
                     print_log(f"Received Cmd: {msg_str}")

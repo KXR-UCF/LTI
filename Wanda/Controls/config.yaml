@@ -10,7 +10,7 @@ PIs:
       2:
         name: Nox Vent
         switch: 2
-        hold_position: false
+        hold_position: null
       3:
         name: N2 Fill
         switch: 6
@@ -18,23 +18,23 @@ PIs:
       4:
         name: N2 Vent
         switch: 7
-        hold_position: false
+        hold_position: null
       5:
         name: Servo Power
         switch: 9
-        hold_position: false
+        hold_position: null
       6:
         name: ARM 1
-        switch: ENABLE FIRE
-        hold_position: false
+        switch: FIRE KEY
+        hold_position: null
       7:
         name: ARM 2
-        switch: ENABLE FIRE
-        hold_position: false
+        switch: FIRE KEY
+        hold_position: null
       8:
         name: FIRE
         switch: FIRE
-        hold_position: false
+        hold_position: null
 
   1:
     enabled: true
