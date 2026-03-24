@@ -170,6 +170,10 @@ class ControllerServer:
         TODO:
             * Check hostnames instead of ip addresses
             * Use handshake of some sort 
+
+        Warning:
+            This method will block indefinitely if a worker Pi or COSMO fails 
+            to connect or has an incorrect IP in the config.
         """
 
         print_log(f"Waiting for {self.num_enabled_pis} connections...")
@@ -230,6 +234,10 @@ class ControllerServer:
 
         Returns:
             bool: True if worker pi recieved and acknowledged the command
+
+        Note:
+            This method clears the socket buffer before sending to ensure the 
+            received ACK belongs to *this* specific command, preventing race conditions.
         """
 
         print_log("-"*30)
@@ -283,7 +291,11 @@ class ControllerServer:
         """Decodes a command
         
         Parses the switch id and target state of the switch from the command.
-        Format of command: "switch_num open/close"
+        
+        Supported Formats:
+            - Numeric: "1 open" -> (1, True)
+            - Fire Key: "enable fire" -> ("FIRE KEY", True)
+            - Abort: "abort open" -> ("ABORT", False)
 
         Args:
             cmd (str): the command from COSMO to be decoded
@@ -291,6 +303,9 @@ class ControllerServer:
         Returns:
             str: the id of the switch in the command
             bool: the state of the switch in the command
+
+        Raises:
+            ValueError: If the command format is unrecognized.
         """
 
         cmd = cmd.strip()
