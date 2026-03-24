@@ -6,27 +6,35 @@ PIs:
       1:
         name: Nox Fill
         switch: 1
+        hold_position: false
       2:
         name: Nox Vent
         switch: 2
+        hold_position: null
       3:
         name: N2 Fill
         switch: 6
+        hold_position: false
       4:
         name: N2 Vent
         switch: 7
+        hold_position: null
       5:
         name: Servo Power
         switch: 9
+        hold_position: null
       6:
         name: ARM 1
-        switch: ENABLE FIRE
+        switch: FIRE KEY
+        hold_position: null
       7:
         name: ARM 2
-        switch: ENABLE FIRE
+        switch: FIRE KEY
+        hold_position: null
       8:
         name: FIRE
         switch: FIRE
+        hold_position: null
 
   1:
     enabled: true
@@ -35,27 +43,35 @@ PIs:
       1:
         name: Fuel Main  # Will be used in timing
         switch: 5
+        hold_position: false
       2:
         name: NOX Main # will be used in timing
         switch: 5
+        hold_position: false
       3:
         name: Fuel/N2 Relief
         switch: 8
+        hold_position: false
       4:
         name: NOX Relief
         switch: 3
+        hold_position: false
       5:
         name: Servo Move
         switch: 10
+        hold_position: false
       6:
         name: Dome Vent
         switch: 4
+        hold_position: false
       7:
         name: null
         switch: null
+        hold_position: false
       8:
         name: null
         switch: null
+        hold_position: false
 
   2:
     enabled: false
@@ -64,28 +80,36 @@ PIs:
       1:
         name: null
         switch: null
+        hold_position: false
       2:
         name: null
         switch: null
+        hold_position: false
       3:
         name: null
         switch: null
+        hold_position: false
       4:
         name: null
         switch: null
+        hold_position: false
       5:
         name: null
         switch: null
+        hold_position: false
       6:
         name: null
         switch: null
+        hold_position: false
       7:
         name: null
         switch: null
+        hold_position: false
       8:
         name: null
         switch: null
+        hold_position: false
 
 
 COSMO:
-  ip: 192.168.1.8
+  ip: 192.168.1.6
