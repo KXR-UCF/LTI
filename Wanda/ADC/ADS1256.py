@@ -215,8 +215,9 @@ class ADS1256:
         read = (buf[0]<<16) & 0xff0000
         read |= (buf[1]<<8) & 0xff00
         read |= (buf[2]) & 0xff
-        if (read & 0x800000):
-            read &= 0xFF000000
+        # handle 24-bit two's complement for negative values
+        if read & 0x800000:
+            read -= 0x1000000
         return read
  
     def getChannelValue(self, Channel):
@@ -260,4 +261,3 @@ class ADS1256:
             ADC_Voltage[i] = self.getChannelVoltage(i)
         return ADC_Voltage
 ### END OF FILE ###
-
