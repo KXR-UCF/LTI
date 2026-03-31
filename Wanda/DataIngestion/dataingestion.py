@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from ADC import adcmanager
+from Wanda.DataIngestion.ADC import adcmanager
 
 import numpy as np
 from questdb.ingress import Sender, Protocol, TimestampNanos

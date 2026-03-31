@@ -5,7 +5,7 @@
 
 #TODO change tare to be in ram and have a zero value that is set in the config file
 
-from ADC import ADS1256
+from Wanda.DataIngestion.ADC import ADS1256
 import numpy as np
 import yaml
 import os
