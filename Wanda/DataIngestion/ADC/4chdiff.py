@@ -18,8 +18,7 @@ try:
     ADC.configADC(6,0xF0)
 
     while True:
-        ADC_Value = ADC.getAll()
-        voltage = np.array(ADC_Value) * 5.0 / 0x7fffff
+        voltage = ADC.getAllVoltages()
 
         print("0 ADC = %lf" % (voltage[0]), end='\t')
         print("1 ADC = %lf" % (voltage[1]), end='\t')
