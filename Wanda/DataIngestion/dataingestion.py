@@ -151,12 +151,18 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
             # send to workers
             queue_start = time.perf_counter()
             packet = {'columns': columns, 'time': timestamp}
+            
             try:
                 questdb_queue.put_nowait(packet)
+            except queue.Full:
+                print_log("Warning: Data Loss <QUESTDB QUEUE FULL>")
+
+            try:    
                 if GRAFANA_ENABLED:
                     grafana_queue.put_nowait(packet)
             except queue.Full:
-                print_log("Warning: Data Loss <QUEUE FULL>")
+                print_log("Warning: Data Loss <GRAFANA QUEUE FULL>")
+
             stats['queue_wait'].append(time.perf_counter() - queue_start)
 
             row_count += 1
