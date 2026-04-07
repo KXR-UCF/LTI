@@ -3,6 +3,7 @@ import yaml
 import time
 import socket
 import os
+import signal
 from typing import Tuple
 from questdb.ingress import Sender, Protocol
 from datetime import datetime
@@ -41,6 +42,11 @@ def print_log(message:str):
     for line in lines:
         print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] {line}")
 
+
+# Signal handler handle SIGTERM returned by systemd during stop
+def sigterm_handler(signum, frame):
+    print_log("SIGTERM received. Exiting")
+    raise KeyboardInterrupt
 
 # contains most of the logic of the control server
 class ControllerServer:
@@ -343,6 +349,10 @@ class ControllerServer:
             self.abort = ("open" in cmd_lower)
             switch_id = 'ABORT'
             state = False
+            
+        elif cmd_lower == "shutdown":
+            print_log("SHUTDOWN command received. Stopping program...")
+            raise KeyboardInterrupt
 
         else:
             raise ValueError(f"Unexpected Command")
@@ -527,6 +537,22 @@ class ControllerServer:
                         self.post_status_to_questdb(switch_id, hold_state)
 
 
+    def shutdown(self) -> None:
+        """Handles a service shutdown"""
+        print_log("Shutting down")
+        
+        # Acknowledge the shutdown command to COSMO if connected
+        if self.cosmo_socket:
+            try:
+                self.cosmo_socket.send(b"ACK: SHUTDOWN;")
+            except Exception:
+                pass
+
+        # Send SHUTDOWN command to all connected worker PIs
+        for worker_id in list(self.worker_pis.keys()):
+            self.send_command_to_worker(worker_id, "SHUTDOWN", max_retries=2)
+
+
     def reconnect_cosmo(self, timeout_seconds=300) -> None:
         """Recconnects COSMO during a disconnection
 
@@ -583,6 +609,9 @@ class ControllerServer:
             print_log(f"Warning: Could not connect to QuestDB: {e}. Running without database.")
             self.sender = None
             
+        # Register signal handler for system termination
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
         print_log(f"{'='*50}")
         try:
             # gets all connections
@@ -606,10 +635,6 @@ class ControllerServer:
                     msg_str = msg.decode().strip()
                     commands = msg_str.rstrip(';').split(';') # if commands buffered, multiple could be concatenated together
 
-                    if 'SHUTDOWN' in commands:
-                        print_log("SHUTDOWN command received. Exiting...")
-                        break
-
                     # handles each command
                     for cmd in commands:
                         self.handle_command(cmd)
@@ -625,6 +650,7 @@ class ControllerServer:
             print_log("Server interrupted by user.")
 
         finally:
+            self.shutdown()
             self.cleanup()
 
 
