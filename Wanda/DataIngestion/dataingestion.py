@@ -31,17 +31,22 @@ HOSTNAME = socket.gethostname()
 
 # questdb config
 QDB_CONF = (
-    'tcp::addr=192.168.1.32:9009;'
+    'http::addr=192.168.1.32:9000;'
     'auto_flush=on;'
-    'auto_flush_interval=100;'
+    'auto_flush_interval=15;'
     # 'auto_flush_rows=2;'
 )
 
 # grafana config
 GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/{HOSTNAME}"
-with open(os.path.join(module_directory, "grafana.key"), 'r') as grafana_key_file:
-    GRAFANA_TOKEN = grafana_key_file.read().strip()
-    GRAFANA_HEADERS = {"Authorization": f"Bearer {GRAFANA_TOKEN}"}
+GRAFANA_ENABLED = False
+try:
+    with open(os.path.join(module_directory, "grafana.key"), 'r') as grafana_key_file:
+        GRAFANA_TOKEN = grafana_key_file.read().strip()
+        GRAFANA_HEADERS = {"Authorization": f"Bearer {GRAFANA_TOKEN}"}
+        GRAFANA_ENABLED = True
+except FileNotFoundError:
+    pass
 
 # stats
 stats = {
@@ -118,7 +123,10 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
 
     # start worker threads
     threading.Thread(target=questdb_worker, daemon=True).start()
-    threading.Thread(target=grafana_worker, daemon=True).start()
+    if GRAFANA_ENABLED:
+        threading.Thread(target=grafana_worker, daemon=True).start()
+    else:
+        print_log("Warning: grafana.key not found. Grafana streaming disabled.")
 
     row_count = 0
     start_time = time.time()
@@ -145,7 +153,8 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
             packet = {'columns': columns, 'time': timestamp}
             try:
                 questdb_queue.put_nowait(packet)
-                grafana_queue.put_nowait(packet)
+                if GRAFANA_ENABLED:
+                    grafana_queue.put_nowait(packet)
             except queue.Full:
                 print_log("Warning: Data Loss <QUEUE FULL>")
             stats['queue_wait'].append(time.perf_counter() - queue_start)
@@ -160,7 +169,8 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
                 avg_rps = (row_count - last_report_rows) / (current_time - last_report_time)
                 avg_adc = np.mean(stats['adc_time']) * 1000
                 avg_questdb = np.mean(stats['questdb_send_time']) * 1000
-                avg_grafana = np.mean(stats['grafana_send_time']) * 1000
+                if GRAFANA_ENABLED:
+                    avg_grafana = np.mean(stats['grafana_send_time']) * 1000
                 avg_queuew = np.mean(stats['queue_wait']) * 1000
 
                 # report
@@ -168,7 +178,8 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
                 print_log(f"AVG RPS:     {avg_rps:.1f}")
                 print_log(f"AVG ADC:     {avg_adc:.1f} ms")
                 print_log(f"AVG QuestDB: {avg_questdb:.1f} ms")
-                print_log(f"AVG Grafana: {avg_grafana:.1f} ms")
+                if GRAFANA_ENABLED:
+                    print_log(f"AVG Grafana: {avg_grafana:.1f} ms")
                 print_log(f"AVG Queue:   {avg_queuew:.1f} ms")
 
                 # reset last
