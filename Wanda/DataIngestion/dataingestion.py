@@ -21,10 +21,9 @@ from collections import deque
 import os
 module_path = os.path.abspath(__file__)
 module_directory = os.path.dirname(module_path)
-del os
 
 # config
-DAQ_CONFIG_FILENAME = "config.yaml"
+DAQ_CONFIG_FILENAME = os.path.join(module_directory, "config.yaml")
 TARGET_RPS = 100
 SAMPLE_INTERVAL = 1.0 / TARGET_RPS
 est = timezone('US/Eastern')
@@ -40,7 +39,7 @@ QDB_CONF = (
 
 # grafana config
 GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/{HOSTNAME}"
-with open("grafana.key", 'r') as grafana_key_file:
+with open(os.path.join(module_directory, "grafana.key"), 'r') as grafana_key_file:
     GRAFANA_TOKEN = grafana_key_file.read().strip()
     GRAFANA_HEADERS = {"Authorization": f"Bearer {GRAFANA_TOKEN}"}
 
