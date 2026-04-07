@@ -13,7 +13,7 @@ This folder contains the ADS1256 library and the DAQ manager module to interface
 
 This library is a modified version of the library from [this repo for Waveshare boards](https://github.com/waveshareteam/High-Precision-AD-DA-Board/tree/master/RaspberryPI/ADS1256/python3).
 
-** Modifications **
+**Modifications**
 - Added `scan_mode` instance variable to properly support differential mode (`setMode()` was previously not working)
 - Supports multiple instances of the ADS1256 with seperate pin numbers.
 
@@ -57,6 +57,7 @@ An additional example file is provided in [`4chdiff.py`](4chdiff.py)
  
 **Available Data Rates (`DRATE_E`):** `30000SPS`, `15000SPS`, `7500SPS`, `3750SPS`, `2000SPS`, `1000SPS`, `500SPS`, `100SPS`, `60SPS`, `50SPS`, `30SPS`, `25SPS`, `15SPS`, `10SPS`, `5SPS`, `2d5SPS`
 
+---
 
 ## adcmanager.py
 
@@ -143,6 +144,18 @@ Sensor names used in the `channels` map must have a corresponding entry under `s
 |---|---|
 | `get_voltage()` | Returns the raw voltage from the sensor's ADC channel. |
 | `get_calibrated_value_linear()` | Returns `voltage × scale + zero` using values from the config. |
+ 
+---
+
+## Example Scripts
+ 
+The following scripts are development and calibration utilities. They are not part of the data ingestion and are not intended for production.
+ 
+| File | Description |
+|---|---|
+| `4chdiff.py` | Basic example reading 4 differential channels in a loop and printing voltages. |
+| `calibration.py` | Reads all channels and prints a rolling average, useful for determining `scale` and `zero` values for the config file. Supports both single-ended and differential mode via the `DIFFERENTIAL` flag. |
+| `livechannels.py` | Same as `calibration.py` but without averaging — prints raw per-sample values. Useful for checking noise and live sensor response. |
  
 ---
  
