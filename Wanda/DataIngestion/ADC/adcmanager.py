@@ -140,7 +140,6 @@ class DAQ:
     def cleanup(self):
         for adc in self.adcs.values():
             adc.module_exit()
-            break
     
     def __enter__(self):
         # Verify ADCs are connected, with 3 reconnection attempts
