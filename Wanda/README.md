@@ -8,12 +8,12 @@ The different systems of the WANDA DAQ & CONTROLS system is split up into separa
 
 | File/Folder | Description |
 |---|---|
-| `DataIngestion/` | Contains all code related to retrieving, sending, and storing realtime sensor data |
-| `Controls/` | Contains all code related to recieving and processing controls commands from COSMO and actuating the proper relays |
-| `Questdb/` | Contains scripts to create QuestDB docker containers |
-| `Systemd/` | Contains systemd service files to manage WANDA services |
-| `status_server.py` | Runs a small Flask server to assist in managing the WANDA system without the use of a terminal |
-| `setupPi.sh` | Setup script to setup a new Raspberry Pi with the WANDA system |
+| [`DataIngestion/`](./DataIngestion/) | Contains all code related to retrieving, sending, and storing realtime sensor data |
+| [`Controls/`](./Controls/) | Contains all code related to recieving and processing controls commands from COSMO and actuating the proper relays |
+| [`Questdb/`](./Questdb/) | Contains scripts to create QuestDB docker containers |
+| [`Systemd/`](./Systemd/) | Contains systemd service files to manage WANDA services |
+| [`status_server.py`](./status_server.py) | Runs a small Flask server to assist in managing the WANDA system without the use of a terminal |
+| [`setupPi.sh`](./setupPi.sh) | Setup script to setup a new Raspberry Pi with the WANDA system |
 
 ---
 
