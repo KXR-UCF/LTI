@@ -18,11 +18,10 @@ Declare an instance of the ADS1256 class with the pins for the ADC (for pin numb
 
 + `setMode(mode)`: sets mode to single-ended (8 channels) or differential mode (4 channels). The hat uses differential mode (int 1). If for somereason you need to use single-ended inputs which supports 8 channels, pass 0 to this function.
 
-+ `getChannelValue(channel)`: Get the output value of a specific channel
++ `getChannelValue(channel)`: Get the output value of a specific channel. This output value is not directly equal to the voltage.
 
-+ `getAll()`: Get the output values of all 4 channels. Returns an array with indexs 0-3 referring to channels 0-3.
-
-To get the associated voltage from retrieved values multiply each one by `5.0 / 0x7fffff`. For arrays this can be easily done using numpy.
++ `getChannelVoltage(self, channel, Vref=2.5)`: Get the output voltage of a specific channel. In differential mode: channels 0-3. In single ended mode: chanmels: 0-7.  
+**This is the primary function that should be used to get data from the adc.**
 
 An example file is provided: [`4chdiff.py`](4chdiff.py)
 
@@ -35,7 +34,7 @@ To use the library on a raspberry pi add the line `dtoverlay=spi0-0cs` to `/boot
 
 ## adcmanager.py
 
-This module helps handle multiple sensors and maps them to their ADC and channel. The mapping and calibration values can be configured in the [`config.yaml` file](config.yaml). 
+This module helps handle multiple sensors and maps them to their ADC and channel. Each sensor should be created using the `Sensor` class. This class is capable of retrieving voltage values from the appropriate channel and applies the stored calibration file before output. The mapping and calibration values can be configured in the [`config.yaml` file](config.yaml). 
 
 TBA
 
