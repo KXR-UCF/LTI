@@ -87,3 +87,5 @@ venv.bak/
 # Temporary files
 *.tmp
 *.temp
+
+*.key
