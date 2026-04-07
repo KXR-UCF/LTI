@@ -29,7 +29,7 @@ Declare an instance of the ADS1256 class with the pins for the ADC (for pin numb
 
 Example:
 ```python
-from ADS1256 import, GAIN_E, DRATE_E
+from ADS1256 import ADS1256, GAIN_E, DRATE_E
 
 adc = ADS1256(rst_pin=24, cs_pin=8, drdy_pin=22)
 adc.init()
@@ -61,11 +61,8 @@ An additional example file is provided in [`4chdiff.py`](4chdiff.py)
 
 ## adcmanager.py
 
-High-level DAQ manager that wraps `ADS1256.py`. Reads a YAML config file to initialize ADCs and map named sensors to specific channels, handling linear calibration automatically.
+DAQ manager that wraps `ADS1256.py`. Reads a YAML config file to initialize ADCs and map named sensors to specific channels, additionally handles sensor calibration values.
 
-
-High-level DAQ manager that wraps `ADS1256.py`. Reads a YAML config file to initialize ADCs and map named sensors to specific channels, handling linear calibration automatically.
- 
 ### Usage
  
 ```python
@@ -105,7 +102,7 @@ ADC2:
   CS_PIN: 7
   DRDY_PIN: 23
   channels:
-    0: "pt8"
+    0: "pt3"
     1: "continuity_raw"
     2: null
  
@@ -116,6 +113,9 @@ sensors:
   pt2:
     zero: -283.77
     scale: 918.83
+  pt3:
+    zero: null              # A null zero defaults to 0
+    scale: null             # A null scale defaults to 1
   continuity_raw:
     zero: 0
     scale: 1
