@@ -6,8 +6,8 @@ This folder contains the ADS1256 library and the DAQ manager module to interface
  
 | File | Description |
 |---|---|
-| `ADS1256.py` | Low-level SPI library for the ADS1256 ADC |
-| `adcmanager.py` | High-level DAQ and Sensor manager, configured via YAML |
+| [`ADS1256.py`](ADS1256.py) | Low-level SPI library for the ADS1256 ADC |
+| [`adcmanager.py`](adcmanager.py) | High-level DAQ and Sensor manager, configured via YAML |
 
 ## ADS1256.py
 

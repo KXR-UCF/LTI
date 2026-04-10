@@ -6,9 +6,9 @@ This folder contains the data ingestion code for WANDA DAQ. The code reads the s
 
 | File | Description |
 |---|---|
-| `dataingestion.py` | Reads all sensors and sends data to QuestDB and Grafana|
-| `config.yaml` | ADC configuration file (See [`ADC README`](ADC#config-file) for configuration requirements and formatting) |
-| `ADC/` | Contains ADS1256 library and DAQ manager (See [`ADC/README.md`](ADC/README.md)) |
+| [`dataingestion.py`](dataingestion.py) | Reads all sensors and sends data to QuestDB and Grafana|
+| [`config.yaml`](config.yaml) | ADC configuration file (See [`ADC README`](ADC#config-file) for configuration requirements and formatting) |
+| [`ADC/`](ADC/) | Contains ADS1256 library and DAQ manager (See [`ADC/README.md`](ADC/README.md)) |
 
 ---
 
