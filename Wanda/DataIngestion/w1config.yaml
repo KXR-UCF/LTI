@@ -7,8 +7,8 @@ ADC1:
   CS_PIN: 8        
   DRDY_PIN: 22
   channels:
-    0: "pt1"
-    1: "pt2"
+    0: "pt2"
+    1: "pt1"
     2: "pt9"
     3: "pt3"
     4: "pt4"
@@ -36,8 +36,8 @@ ADC2:
 
 sensors:
   pt1:
-    zero: null
-    scale: null
+    zero: -1031.4
+    scale: 3071.4
   pt2:
     zero: -283.77
     scale: 918.83
