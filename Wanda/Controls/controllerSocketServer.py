@@ -36,6 +36,8 @@ PORT = 9600        # Same port as in the client
 # /Wanda/Controls/config.yaml
 CONFIG_FILE_NAME = "config.yaml"
 
+HOSTNAME = socket.gethostname()
+
 # prints message with current time before each line for logging
 def print_log(message:str):
     lines = message.split('\n')
@@ -119,6 +121,16 @@ class ControllerServer:
         for pin in RELAY_PINS:
             GPIO.setup(pin, GPIO.OUT)
 
+    def enable_keepalive(self, sock: socket.socket) -> None:
+        """Enables TCP Keepalive on the socket to detect physical disconnections."""
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # Adjust keepalive timers (Linux/Raspberry Pi specific)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1) # Time before sending keepalive probes
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1) # Interval between keepalive probes
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3) # Failed probes before dropping connection
 
     def setup_socket(self) -> None:
         """
@@ -190,6 +202,7 @@ class ControllerServer:
         while num_connected_workers < self.num_enabled_pis-1 or not COSMO_connected:
             # accept incoming connection
             client_socket, client_address = self.server_socket.accept()
+            self.enable_keepalive(client_socket)
             ip = client_address[0]
 
             # TODO: Do handshake with incoming connection (maybe to get hostname)
@@ -383,13 +396,13 @@ class ControllerServer:
             return False
 
         # handles switches controlled on the controller
-        if str(pi_id) == "controller":
+        if str(pi_id).lower() == HOSTNAME.lower():
             if target_state:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
             else:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
             success = True
-            print_log(f"Controller: Relay:{relay_id} State:{target_state}")
+            print_log(f"{str(pi_id)}: Relay:{relay_id} State:{target_state}")
             
         else:
             # sends command to worker pi
@@ -574,6 +587,7 @@ class ControllerServer:
         while time.time() - start_time < timeout_seconds:
             try:
                 client_socket, client_address = self.server_socket.accept()
+                self.enable_keepalive(client_socket)
                 ip = client_address[0]
                 
                 if ip == self.config["COSMO"]["ip"]:
@@ -609,11 +623,12 @@ class ControllerServer:
             print_log(f"Warning: Could not connect to QuestDB: {e}. Running without database.")
             self.sender = None
             
-        # Register signal handler for system termination
-        signal.signal(signal.SIGTERM, sigterm_handler)
 
         print_log(f"{'='*50}")
         try:
+            # Register signal handler for system termination
+            signal.signal(signal.SIGTERM, sigterm_handler)
+            
             # gets all connections
             self.wait_for_connections()
             
@@ -621,6 +636,7 @@ class ControllerServer:
             while True:
                 try:
                     # recieves command from COSMO
+                    self.cosmo_socket.settimeout(None)
                     msg = self.cosmo_socket.recv(1024)
 
                     # If there's no data, break the loop

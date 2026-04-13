@@ -20,17 +20,39 @@ class OverrideManager:
 
     # TEST SEQUENCE
     def run_fire(self, state):
-        if state:  # Only execute sequence if FIRE is set to True
-            for pi_id in ["controller", "1"]:
-                for relay_id in range(1, 9):
-                    self.controller.set_relay(pi_id, relay_id, True)
-                    time.sleep(0.5)
+        self.controller.set_relay("wanda1", 6, True)
+        self.controller.set_relay("wanda1", 7, True)
+
+        fire_start = time.perf_counter()
+
+        while (time.perf_counter() - fire_start) * 1000 < 100:
+            time.sleep(0.001)
+        self.controller.set_relay("wanda2", 1, True)
+        
+        while (time.perf_counter() - fire_start) * 1000 < 200:
+            time.sleep(0.001)
+        self.controller.set_relay("wanda2", 2, True)
+
+        while (time.perf_counter() - fire_start) * 1000 < 300:
+            time.sleep(0.001)
+        self.controller.set_relay("wanda1", 8, True)
+        
+
+        
+
+
+
 
     def run_fire_key(self, state):
         if state:
-            pass # Add logic for ENABLE FIRE here
+            self.controller.set_relay("wanda1", 6, True);
+            self.controller.set_relay("wanda1", 7, True);
         else:
-            pass # Add logic for DISABLE FIRE here
+            self.controller.set_relay("wanda1", 6, False);
+            self.controller.set_relay("wanda1", 7, False);
+            self.controller.set_relay("wanda2", 1, False);
+            self.controller.set_relay("wanda2", 2, False);
+            self.controller.set_relay("wanda1", 8, False);
 
     OVERRIDDEN_CMDS = {
         "fire": run_fire,
