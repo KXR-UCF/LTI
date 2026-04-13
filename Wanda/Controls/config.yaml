@@ -1,5 +1,5 @@
 PIs:
-  controller:
+  wanda1:
     enabled: true
     ip: 192.168.1.30
     relays:
@@ -10,7 +10,7 @@ PIs:
       2:
         name: Nox Vent
         switch: 2
-        hold_position: null
+        hold_position: true
       3:
         name: N2 Fill
         switch: 6
@@ -18,25 +18,25 @@ PIs:
       4:
         name: N2 Vent
         switch: 7
-        hold_position: null
+        hold_position: true
       5:
         name: Servo Power
         switch: 9
-        hold_position: null
+        hold_position: false
       6:
         name: ARM 1
-        switch: FIRE KEY
-        hold_position: null
+        switch: null
+        hold_position: false
       7:
         name: ARM 2
-        switch: FIRE KEY
-        hold_position: null
+        switch: null
+        hold_position: false
       8:
         name: FIRE
-        switch: FIRE
-        hold_position: null
+        switch: null
+        hold_position: false
 
-  1:
+  wanda2:
     enabled: true
     ip: 192.168.1.31
     relays:
@@ -51,11 +51,11 @@ PIs:
       3:
         name: Fuel/N2 Relief
         switch: 8
-        hold_position: false
+        hold_position: true
       4:
         name: NOX Relief
         switch: 3
-        hold_position: false
+        hold_position: true
       5:
         name: Servo Move
         switch: 10
@@ -73,7 +73,7 @@ PIs:
         switch: null
         hold_position: false
 
-  2:
+  wanda3:
     enabled: false
     ip: 192.168.1.32
     relays:

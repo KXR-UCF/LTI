@@ -1,6 +1,7 @@
 import RPi.GPIO as GPIO
 import socket
 import time
+import signal
 
 from datetime import datetime
 from pytz import timezone
@@ -10,6 +11,14 @@ def print_log(message:str):
     lines = message.split('\n')
     for line in lines:
         print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S')}] {line}")
+
+# Signal handler handle SIGTERM returned by systemd during stop
+def sigterm_handler(signum, frame):
+    print_log("SIGTERM received. Exiting")
+    raise KeyboardInterrupt
+
+# Register signal handler for system termination
+signal.signal(signal.SIGTERM, sigterm_handler)
 
 # numbered in order 1-8
 RELAY_PINS = [5, 6, 13, 16, 19, 20, 21, 26]
@@ -51,7 +60,16 @@ try:
         # splits message into each command
         cmds = msg.rstrip(';').split(';')
         for cmd in cmds:
+            if not cmd:
+                continue
+                
             print_log(f"Recieved CMD: <{cmd}>")
+            
+            if cmd.strip().upper() == "SHUTDOWN":
+                print_log("SHUTDOWN command received. Stopping")
+                controller_pi_socket.send(f"ACK: {cmd}".encode())
+                raise KeyboardInterrupt
+
             success = False
             err_msg = ""
 

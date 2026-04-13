@@ -3,6 +3,7 @@ import yaml
 import time
 import socket
 import os
+import signal
 from typing import Tuple
 from questdb.ingress import Sender, Protocol
 from datetime import datetime
@@ -35,12 +36,19 @@ PORT = 9600        # Same port as in the client
 # /Wanda/Controls/config.yaml
 CONFIG_FILE_NAME = "config.yaml"
 
+HOSTNAME = socket.gethostname()
+
 # prints message with current time before each line for logging
 def print_log(message:str):
     lines = message.split('\n')
     for line in lines:
         print(f"[{datetime.now(tz=est).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] {line}")
 
+
+# Signal handler handle SIGTERM returned by systemd during stop
+def sigterm_handler(signum, frame):
+    print_log("SIGTERM received. Exiting")
+    raise KeyboardInterrupt
 
 # contains most of the logic of the control server
 class ControllerServer:
@@ -113,6 +121,16 @@ class ControllerServer:
         for pin in RELAY_PINS:
             GPIO.setup(pin, GPIO.OUT)
 
+    def enable_keepalive(self, sock: socket.socket) -> None:
+        """Enables TCP Keepalive on the socket to detect physical disconnections."""
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # Adjust keepalive timers (Linux/Raspberry Pi specific)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1) # Time before sending keepalive probes
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1) # Interval between keepalive probes
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3) # Failed probes before dropping connection
 
     def setup_socket(self) -> None:
         """
@@ -184,6 +202,7 @@ class ControllerServer:
         while num_connected_workers < self.num_enabled_pis-1 or not COSMO_connected:
             # accept incoming connection
             client_socket, client_address = self.server_socket.accept()
+            self.enable_keepalive(client_socket)
             ip = client_address[0]
 
             # TODO: Do handshake with incoming connection (maybe to get hostname)
@@ -343,6 +362,10 @@ class ControllerServer:
             self.abort = ("open" in cmd_lower)
             switch_id = 'ABORT'
             state = False
+            
+        elif cmd_lower == "shutdown":
+            print_log("SHUTDOWN command received. Stopping program...")
+            raise KeyboardInterrupt
 
         else:
             raise ValueError(f"Unexpected Command")
@@ -373,13 +396,13 @@ class ControllerServer:
             return False
 
         # handles switches controlled on the controller
-        if str(pi_id) == "controller":
+        if str(pi_id).lower() == HOSTNAME.lower():
             if target_state:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.HIGH)
             else:
                 GPIO.output(RELAY_PINS[relay_id-1], GPIO.LOW)
             success = True
-            print_log(f"Controller: Relay:{relay_id} State:{target_state}")
+            print_log(f"{str(pi_id)}: Relay:{relay_id} State:{target_state}")
             
         else:
             # sends command to worker pi
@@ -527,6 +550,22 @@ class ControllerServer:
                         self.post_status_to_questdb(switch_id, hold_state)
 
 
+    def shutdown(self) -> None:
+        """Handles a service shutdown"""
+        print_log("Shutting down")
+        
+        # Acknowledge the shutdown command to COSMO if connected
+        if self.cosmo_socket:
+            try:
+                self.cosmo_socket.send(b"ACK: SHUTDOWN;")
+            except Exception:
+                pass
+
+        # Send SHUTDOWN command to all connected worker PIs
+        for worker_id in list(self.worker_pis.keys()):
+            self.send_command_to_worker(worker_id, "SHUTDOWN", max_retries=2)
+
+
     def reconnect_cosmo(self, timeout_seconds=300) -> None:
         """Recconnects COSMO during a disconnection
 
@@ -548,6 +587,7 @@ class ControllerServer:
         while time.time() - start_time < timeout_seconds:
             try:
                 client_socket, client_address = self.server_socket.accept()
+                self.enable_keepalive(client_socket)
                 ip = client_address[0]
                 
                 if ip == self.config["COSMO"]["ip"]:
@@ -583,8 +623,12 @@ class ControllerServer:
             print_log(f"Warning: Could not connect to QuestDB: {e}. Running without database.")
             self.sender = None
             
+
         print_log(f"{'='*50}")
         try:
+            # Register signal handler for system termination
+            signal.signal(signal.SIGTERM, sigterm_handler)
+            
             # gets all connections
             self.wait_for_connections()
             
@@ -592,6 +636,7 @@ class ControllerServer:
             while True:
                 try:
                     # recieves command from COSMO
+                    self.cosmo_socket.settimeout(None)
                     msg = self.cosmo_socket.recv(1024)
 
                     # If there's no data, break the loop
@@ -605,10 +650,6 @@ class ControllerServer:
                     # Decode the received data
                     msg_str = msg.decode().strip()
                     commands = msg_str.rstrip(';').split(';') # if commands buffered, multiple could be concatenated together
-
-                    if 'SHUTDOWN' in commands:
-                        print_log("SHUTDOWN command received. Exiting...")
-                        break
 
                     # handles each command
                     for cmd in commands:
@@ -625,6 +666,7 @@ class ControllerServer:
             print_log("Server interrupted by user.")
 
         finally:
+            self.shutdown()
             self.cleanup()
 
 
