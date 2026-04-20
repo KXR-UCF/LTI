@@ -1,0 +1,14 @@
+[Unit]
+Description=Starts cosmo backend
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=lti
+WorkingDirectory=/home/lti/Production
+ExecStart=/usr/bin/npm start >> backend.log 2>&1
+
+[Install]
+WantedBy=multi-user.target

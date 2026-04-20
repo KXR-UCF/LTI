@@ -1,0 +1,15 @@
+[Unit]
+Description=Starts cosmo frontend
+After=network.target socket_client.service
+Requires=socket_client.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=lti
+WorkingDirectory=/home/lti/Production
+ExecStart=/usr/bin/npm run dev >> frontend.log 2>&1
+
+[Install]
+WantedBy=multi-user.target

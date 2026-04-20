@@ -4,6 +4,8 @@ Description=Runs Production Start
 [Service]
 Type=oneshot
 RemainAfterExit=true
+Restart=always
+RestartSec=5
 User=kxr
 WorkingDirectory=/home/kxr/LTI-25
 ExecStart=/usr/bin/bash /home/kxr/LTI-25/Systemd/startCosmo.sh
