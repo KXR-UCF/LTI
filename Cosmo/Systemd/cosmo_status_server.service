@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=kxr
 WorkingDirectory=/home/kxr/LTI-25/Cosmo
-ExecStart=/bin/bash -c '/home/kxr/venv/bin/python3 -u /home/kxr/LTI-25/Cosmo/cosmo_status_server.py >> /home/kxr/status.log 2>&1'
+ExecStart=/bin/bash -c '/home/kxr/venv/bin/python3 -u /home/kxr/LTI-25/Cosmo/cosmo_status_server.py >> /home/kxr/LTI-25/Cosmo/status.log 2>&1'
 Restart=always
 RestartSec=5
 

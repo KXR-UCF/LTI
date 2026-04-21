@@ -9,7 +9,7 @@ Restart=always
 RestartSec=5
 User=kxr
 WorkingDirectory=/home/kxr/LTI-25/Cosmo/Telemetry_visualization/Backend
-ExecStart=/bin/bash -c '/bin/npm run dev >> /home/kxr/backend.log 2>&1'
+ExecStart=/bin/bash -c '/bin/npm run dev >> /home/kxr/LTI-25/Cosmo/backend.log 2>&1'
 
 [Install]
 WantedBy=multi-user.target
