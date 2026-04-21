@@ -21,7 +21,10 @@ app = Flask(__name__)
 BASE_DIR = '/home/kxr'
 
 # List of systemd services you want to control from UI
-SERVICES = ['cosmo.service']
+SERVICES = ['backend.service', 
+            'frontend.service', 
+            'socket_client.service', 
+            'cosmo_status_server.service']
 
 # Styling for dashboard UI embedded into script
 CSS = '''
