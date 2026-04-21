@@ -18,7 +18,7 @@ hostname = socket.gethostname().upper()
 app = Flask(__name__)
 
 # Base directory where logs/configs live
-BASE_DIR = '/home/lti/Production'
+BASE_DIR = '/home/kxr'
 
 # List of systemd services you want to control from UI
 SERVICES = ['cosmo.service']

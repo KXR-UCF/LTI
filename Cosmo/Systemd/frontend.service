@@ -1,15 +1,15 @@
 [Unit]
 Description=Starts cosmo frontend
-After=network.target socket_client.service
-Requires=socket_client.service
+After=network.target socket_client.service backend.service
+Requires=socket_client.service backend.service
 
 [Service]
 Type=simple
 Restart=always
 RestartSec=5
-User=lti
-WorkingDirectory=/home/lti/Production
-ExecStart=/usr/bin/npm run dev >> frontend.log 2>&1
+User=kxr
+WorkingDirectory=/home/kxr/LTI-25/Cosmo/Telemetry_visualization/Frontend
+ExecStart=/bin/bash -c '/bin/npm run dev >> /home/kxr/frontend.log 2>&1'
 
 [Install]
 WantedBy=multi-user.target

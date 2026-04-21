@@ -1,15 +1,14 @@
 [Unit]
 Description=Starts socket client
-After=network.target backend.service
-Requires=backend.service
+After=network.target
 
 [Service]
 Type=simple
 Restart=always
 RestartSec=5
-User=lti
-WorkingDirectory=/home/lti/Production
-ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/socket_client.py >> /home/lti/Production/socket_client.log 2>&1'
+User=kxr
+WorkingDirectory=/home/kxr/LTI-25/Cosmo
+ExecStart=/bin/bash -c '/usr/bin/python3 -u /home/kxr/LTI-25/socket_client.py >> /home/kxr/socket_client.log 2>&1'
 
 [Install]
 WantedBy=multi-user.target
