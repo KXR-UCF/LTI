@@ -9,6 +9,7 @@ Restart=always
 RestartSec=5
 User=kxr
 WorkingDirectory=/home/kxr/LTI-25/Cosmo/Telemetry_visualization/Backend
+Environment=PATH=/usr/bin:/usr/local/bin:/home/kxr/.nvm/versions/node/v25.2.1/bin/
 ExecStart=/bin/bash -c '/home/kxr/.nvm/versions/node/v25.2.1/bin/npm start >> /home/kxr/LTI-25/Cosmo/backend.log 2>&1'
 
 [Install]
