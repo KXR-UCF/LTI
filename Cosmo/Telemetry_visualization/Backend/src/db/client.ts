@@ -6,7 +6,7 @@ import postgres from 'postgres';
 
 // 2. Define connection options with hardcoded credentials
 const sql = postgres({
-  host: '127.0.0.1',
+  host: '192.168.1.30',
   port: 8812,
   username: 'admin',
   password: 'quest',
