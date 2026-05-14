@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # from Wanda.DataIngestion.ADC import adcmanager
-from Wanda.DataIngestion.ADC.adcmanager import DAQ
+from ADC.adcmanager import DAQ
 
 import numpy as np
 from questdb.ingress import Sender, Protocol, TimestampNanos
@@ -16,6 +16,7 @@ import queue
 from datetime import datetime
 from pytz import timezone
 
+import statistics
 from collections import deque
 
 import os
@@ -25,6 +26,8 @@ module_directory = os.path.dirname(module_path)
 # config
 DAQ_CONFIG_FILENAME = os.path.join(module_directory, "config.yaml")
 TARGET_RPS = 100
+EMA_STRENGTH = 0.25
+MEDIAN_RANGE = 10
 SAMPLE_INTERVAL = 1.0 / TARGET_RPS
 est = timezone('US/Eastern')
 HOSTNAME = socket.gethostname()
@@ -39,7 +42,7 @@ QDB_CONF = (
 
 # grafana config
 GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/{HOSTNAME}"
-GRAFANA_ENABLED = False
+GRAFANA_ENABLED = True
 try:
     with open(os.path.join(module_directory, "grafana.key"), 'r') as grafana_key_file:
         GRAFANA_TOKEN = grafana_key_file.read().strip()
@@ -58,8 +61,8 @@ stats = {
 }
 
 # queues
-questdb_queue = queue.Queue(1000)
-grafana_queue = queue.Queue(1000)
+questdb_queue = queue.Queue(5)
+grafana_queue = queue.Queue(5)
 
 def print_log(message:str):
     lines = message.split('\n')
@@ -89,14 +92,37 @@ def questdb_worker():
 
 
 def grafana_worker():
+    prev_data_columns = None
+    raw_history = {}
     try:
         while True:
             data = grafana_queue.get()
             if data is None:
                 break
 
+            grafana_cols = data['columns'].copy()
+
+            if prev_data_columns is None:
+                prev_data_columns = grafana_cols.copy()
+                for field, value in grafana_cols.items():
+                    raw_history[field] = deque([value]*MEDIAN_RANGE, maxlen=MEDIAN_RANGE)
+
+            # apply moving median and exponential moving average
+            for field, value in grafana_cols.items():
+                if field not in raw_history:
+                    raw_history[field] = deque([value]*MEDIAN_RANGE, maxlen=MEDIAN_RANGE)
+                raw_history[field].append(value)
+
+                median_value = statistics.median(raw_history[field])
+
+                # diff = abs(median_value - prev_data_columns[field])
+                # dynamic_strength = min(0.5, EMA_STRENGTH + (diff * 0.02))
+
+                grafana_cols[field] = (EMA_STRENGTH * median_value) + ((1-EMA_STRENGTH) * prev_data_columns[field])
+            prev_data_columns = grafana_cols.copy()
+
             try:
-                fields = ",".join([f"{k}={v}" for k, v in data['columns'].items()])
+                fields = ",".join([f"{k}={v}" for k, v in grafana_cols.items()])
                 payload = f"{HOSTNAME} {fields}"
 
                 start = time.perf_counter()
@@ -155,13 +181,15 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
             try:
                 questdb_queue.put_nowait(packet)
             except queue.Full:
-                print_log("Warning: Data Loss <QUESTDB QUEUE FULL>")
+                if row_count % TARGET_RPS == 0:
+                    print_log("Warning: Data Loss <QUESTDB QUEUE FULL>")
 
             try:    
                 if GRAFANA_ENABLED:
                     grafana_queue.put_nowait(packet)
             except queue.Full:
-                print_log("Warning: Data Loss <GRAFANA QUEUE FULL>")
+                if row_count % TARGET_RPS == 0:
+                    print_log("Warning: Data Loss <GRAFANA QUEUE FULL>")
 
             stats['queue_wait'].append(time.perf_counter() - queue_start)
 
