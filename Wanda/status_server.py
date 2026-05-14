@@ -9,8 +9,8 @@ import subprocess
 hostname = socket.gethostname().upper()
 app = Flask(__name__)
 
-BASE_DIR = '/home/lti/Production'
-SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb', 'status_server']
+BASE_DIR = '/home/lti/Wanda'
+SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb', 'grafana', 'status_server']
 
 CSS = '''
 <style>
