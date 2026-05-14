@@ -16,6 +16,7 @@ import queue
 from datetime import datetime
 from pytz import timezone
 
+import statistics
 from collections import deque
 
 import os
@@ -25,6 +26,8 @@ module_directory = os.path.dirname(module_path)
 # config
 DAQ_CONFIG_FILENAME = os.path.join(module_directory, "config.yaml")
 TARGET_RPS = 100
+EMA_STRENGTH = 0.25
+MEDIAN_RANGE = 10
 SAMPLE_INTERVAL = 1.0 / TARGET_RPS
 est = timezone('US/Eastern')
 HOSTNAME = socket.gethostname()
@@ -58,8 +61,8 @@ stats = {
 }
 
 # queues
-questdb_queue = queue.Queue(10)
-grafana_queue = queue.Queue(10)
+questdb_queue = queue.Queue(5)
+grafana_queue = queue.Queue(5)
 
 def print_log(message:str):
     lines = message.split('\n')
@@ -90,23 +93,36 @@ def questdb_worker():
 
 def grafana_worker():
     prev_data_columns = None
-    ema_strength = 1
+    raw_history = {}
     try:
         while True:
             data = grafana_queue.get()
             if data is None:
                 break
 
-            if prev_data_columns is None:
-                prev_data_columns = data['columns']
+            grafana_cols = data['columns'].copy()
 
-            ema_data_columns = {}
-            for field, value in data['columns'].items():
-                ema_data_columns[field] = (ema_strength * value) + ((1-ema_strength) * prev_data_columns[field])
-            prev_data_columns = data['columns']
+            if prev_data_columns is None:
+                prev_data_columns = grafana_cols.copy()
+                for field, value in grafana_cols.items():
+                    raw_history[field] = deque([value]*MEDIAN_RANGE, maxlen=MEDIAN_RANGE)
+
+            # apply moving median and exponential moving average
+            for field, value in grafana_cols.items():
+                if field not in raw_history:
+                    raw_history[field] = deque([value]*MEDIAN_RANGE, maxlen=MEDIAN_RANGE)
+                raw_history[field].append(value)
+
+                median_value = statistics.median(raw_history[field])
+
+                # diff = abs(median_value - prev_data_columns[field])
+                # dynamic_strength = min(0.5, EMA_STRENGTH + (diff * 0.02))
+
+                grafana_cols[field] = (EMA_STRENGTH * median_value) + ((1-EMA_STRENGTH) * prev_data_columns[field])
+            prev_data_columns = grafana_cols.copy()
 
             try:
-                fields = ",".join([f"{k}={v}" for k, v in ema_data_columns.items()])
+                fields = ",".join([f"{k}={v}" for k, v in grafana_cols.items()])
                 payload = f"{HOSTNAME} {fields}"
 
                 start = time.perf_counter()
