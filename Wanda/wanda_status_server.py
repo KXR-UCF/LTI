@@ -10,7 +10,7 @@ hostname = socket.gethostname().upper()
 app = Flask(__name__)
 
 BASE_DIR = '/home/lti/Wanda'
-SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb', 'grafana', 'status_server']
+SERVICES = ['controller_socket', 'worker_socket', 'dataingestion', 'questdb', 'grafana', 'wanda_status_server']
 
 CSS = '''
 <style>
