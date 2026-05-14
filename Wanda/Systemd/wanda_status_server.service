@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=lti
-WorkingDirectory=/home/lti/Production
-ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/wanda_status_server.py >> /home/lti/Production/status.log 2>&1'
+WorkingDirectory=/home/lti/
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Wanda/status_server.py >> /home/lti/Wanda/status.log 2>&1'
 Restart=always
 RestartSec=5
 

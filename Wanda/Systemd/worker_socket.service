@@ -5,10 +5,10 @@ After=network.target
 [Service]
 Type=simple
 User=lti
-WorkingDirectory=/home/lti/Production
+WorkingDirectory=/home/lti/
 Restart=always
 RestartSec=5
-ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Production/Controls/workerSocketClient.py >> /home/lti/Production/controls.log 2>&1'
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Wanda/Controls/workerSocketClient.py >> /home/lti/Wanda/controls.log 2>&1'
 
 [Install]
 WantedBy=multi-user.target
