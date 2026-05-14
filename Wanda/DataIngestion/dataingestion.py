@@ -39,7 +39,7 @@ QDB_CONF = (
 
 # grafana config
 GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/{HOSTNAME}"
-GRAFANA_ENABLED = False
+GRAFANA_ENABLED = True
 try:
     with open(os.path.join(module_directory, "grafana.key"), 'r') as grafana_key_file:
         GRAFANA_TOKEN = grafana_key_file.read().strip()
@@ -58,8 +58,8 @@ stats = {
 }
 
 # queues
-questdb_queue = queue.Queue(1000)
-grafana_queue = queue.Queue(1000)
+questdb_queue = queue.Queue(10)
+grafana_queue = queue.Queue(10)
 
 def print_log(message:str):
     lines = message.split('\n')
@@ -89,14 +89,24 @@ def questdb_worker():
 
 
 def grafana_worker():
+    prev_data_columns = None
+    ema_strength = 1
     try:
         while True:
             data = grafana_queue.get()
             if data is None:
                 break
 
+            if prev_data_columns is None:
+                prev_data_columns = data['columns']
+
+            ema_data_columns = {}
+            for field, value in data['columns'].items():
+                ema_data_columns[field] = (ema_strength * value) + ((1-ema_strength) * prev_data_columns[field])
+            prev_data_columns = data['columns']
+
             try:
-                fields = ",".join([f"{k}={v}" for k, v in data['columns'].items()])
+                fields = ",".join([f"{k}={v}" for k, v in ema_data_columns.items()])
                 payload = f"{HOSTNAME} {fields}"
 
                 start = time.perf_counter()
@@ -155,13 +165,15 @@ with DAQ(DAQ_CONFIG_FILENAME) as daq:
             try:
                 questdb_queue.put_nowait(packet)
             except queue.Full:
-                print_log("Warning: Data Loss <QUESTDB QUEUE FULL>")
+                if row_count % TARGET_RPS == 0:
+                    print_log("Warning: Data Loss <QUESTDB QUEUE FULL>")
 
             try:    
                 if GRAFANA_ENABLED:
                     grafana_queue.put_nowait(packet)
             except queue.Full:
-                print_log("Warning: Data Loss <GRAFANA QUEUE FULL>")
+                if row_count % TARGET_RPS == 0:
+                    print_log("Warning: Data Loss <GRAFANA QUEUE FULL>")
 
             stats['queue_wait'].append(time.perf_counter() - queue_start)
 
