@@ -1,0 +1,13 @@
+[Unit]
+Description=LTI Static Asset Web Server
+After=network.target
+
+[Service]
+Type=simple
+User=lti
+WorkingDirectory=/home/lti/lti_assets
+ExecStart=/usr/bin/python3 -m http.server 8081
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

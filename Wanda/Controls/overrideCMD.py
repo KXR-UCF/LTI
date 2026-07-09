@@ -38,11 +38,6 @@ class OverrideManager:
         self.controller.set_relay("wanda1", 8, True)
         
 
-        
-
-
-
-
     def run_fire_key(self, state):
         if state:
             self.controller.set_relay("wanda1", 6, True);
