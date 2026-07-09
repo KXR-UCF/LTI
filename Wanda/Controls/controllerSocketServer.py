@@ -5,12 +5,28 @@ import socket
 import os
 import signal
 from typing import Tuple
+import requests
+import queue
+import threading
 from questdb.ingress import Sender, Protocol
 from datetime import datetime
 from pytz import timezone
 est = timezone('US/Eastern')
 
 from overrideCMD import OverrideManager
+
+# grafana config
+GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/controls"
+# GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/"
+try:
+    with open("grafana.key", 'r') as grafana_key_file:
+        GRAFANA_TOKEN = grafana_key_file.read().strip()
+        GRAFANA_HEADERS = {"Authorization": f"Bearer {GRAFANA_TOKEN}"}
+        GRAFANA_ENABLED = True
+except FileNotFoundError:
+    print("Warning: grafana.key not found. Grafana streaming disabled.")
+    GRAFANA_ENABLED = False
+    pass
 
 # class used to make instances of each worker pi (wanda2 and wanda3)
 class WorkerPi:
@@ -70,6 +86,20 @@ class ControllerServer:
         self.switch_states['FIRE'] = False
         self.switch_states['ABORT'] = False
         self.sender = None
+
+        # relay tracking default states
+        self.relay_states = {}
+        for pi_id, pi_data in self.config["PIs"].items():
+            if pi_data["enabled"]:
+                for relay_id, relay_data in pi_data["relays"].items():
+                    relay_name = relay_data.get("name")
+                    if relay_name:
+                        self.relay_states[relay_name] = False
+
+        # start relay grafana thread
+        self.grafana_relay_queue = queue.Queue(maxsize=100)
+        if GRAFANA_ENABLED:
+            threading.Thread(target=self.grafana_relay_worker, daemon=True).start()
 
         self.abort = False
 
@@ -409,6 +439,16 @@ class ControllerServer:
             worker_msg = f"{relay_id} {target_state}"
             success = self.send_command_to_worker(pi_id, worker_msg)
 
+        if success:
+            try:
+                relay_data = self.config["PIs"][pi_id]["relays"][relay_id]
+                relay_name = relay_data.get("name")
+                if relay_name:
+                    self.relay_states[relay_name] = target_state
+                    self.post_relays_to_grafana()
+            except Exception as e:
+                print_log(f"[ERROR] Failed to update relay state tracking: {e}")
+
         return success
     
     
@@ -438,8 +478,56 @@ class ControllerServer:
             except Exception as e:
                 print_log(f"QuestDB Error: {e}")
 
-        pass
+        if GRAFANA_ENABLED:
+            try:
+                # fromat bools as 1 and 0 for grafana
+                fields = ",".join([f"{k}={int(v)}" for k, v in self.switch_states.items()])
+                payload = f"switches {fields}"
 
+                requests.post(GRAFANA_URL, data=payload, headers=GRAFANA_HEADERS, timeout=0.1)
+            except requests.exceptions.RequestException:
+                pass # Silently ignore network timeouts so we don't spam logs
+            except Exception as e:
+                print_log(f"Unexpected Grafana Formatting Error: {e}")
+               
+
+    def post_relays_to_grafana(self) -> None:
+        if GRAFANA_ENABLED:
+            try:
+                snapshot = self.relay_states.copy()
+                self.grafana_relay_queue.put_nowait(snapshot)
+            except queue.Full:
+                print_log(f"[WARNING] Grafana Queue Full, missing relay state")
+                pass
+            except Exception as e:
+                print_log(f"Grafana Queue Error: {e}")
+
+
+    def grafana_relay_worker(self) -> None:
+        while True:
+            try:
+                relay_snapshot = self.grafana_relay_queue.get()
+                if relay_snapshot is None:
+                    break
+
+                # clean name
+                field_pairs = []
+                for name, state in relay_snapshot.items():
+                    clean_name = str(name).replace(' ', '_').replace('/', '_')
+                    field_pairs.append(f"{clean_name}={int(state)}")
+
+                fields = ",".join(field_pairs)
+                payload = f"relays {fields}"
+
+                requests.post(GRAFANA_URL, data=payload, headers=GRAFANA_HEADERS, timeout=0.1)
+                self.grafana_relay_queue.task_done()
+            except requests.exceptions.RequestException:
+                pass # silently ignore timeouts
+            except Exception as e:
+                print_log(f"Grafana Worker Error: {e}")
+                
+                
+    
 
     def handle_command(self, cmd: str) -> None:
         """Handles the process for a command

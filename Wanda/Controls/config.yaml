@@ -49,7 +49,7 @@ PIs:
         switch: 5
         hold_position: false
       3:
-        name: Fuel/N2 Relief
+        name: Fuel Relief
         switch: 8
         hold_position: true
       4:
