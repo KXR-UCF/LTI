@@ -42,13 +42,14 @@ QDB_CONF = (
 
 # grafana config
 GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/{HOSTNAME}"
-GRAFANA_ENABLED = True
 try:
     with open(os.path.join(module_directory, "grafana.key"), 'r') as grafana_key_file:
         GRAFANA_TOKEN = grafana_key_file.read().strip()
         GRAFANA_HEADERS = {"Authorization": f"Bearer {GRAFANA_TOKEN}"}
         GRAFANA_ENABLED = True
 except FileNotFoundError:
+    print("Warning: grafana.key not found. Grafana streaming disabled.")
+    GRAFANA_ENABLED = False
     pass
 
 # stats
@@ -123,7 +124,7 @@ def grafana_worker():
 
             try:
                 fields = ",".join([f"{k}={v}" for k, v in grafana_cols.items()])
-                payload = f"{HOSTNAME} {fields}"
+                payload = f"telemetry {fields}"
 
                 start = time.perf_counter()
                 requests.post(GRAFANA_URL, data=payload, headers=GRAFANA_HEADERS, timeout=0.1)
