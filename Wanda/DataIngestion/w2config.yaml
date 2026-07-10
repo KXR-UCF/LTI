@@ -8,9 +8,9 @@ ADC1:
   DRDY_PIN: 22
   channels:
     0: "lc1"
-    1: "lc2"
-    2: "lc3"
-    3: "lc4"
+    1: "tc3"
+    2: "tc4"
+    3: null
 
 ADC2:
   enabled: true
@@ -23,8 +23,8 @@ ADC2:
   channels:
     0: "tc1"
     1: "tc2"
-    2: null
-    3: null
+    2: "tc5"
+    3: "tc6"
 
 sensors:
   lc1:
@@ -44,4 +44,17 @@ sensors:
     scale: 25550
   tc2:
     zero: 286.4816  # celius 0: 3.4816
+    scale: 25550
+  # tc 3-6 require calibration check
+  tc3:
+    zero: 286.4816
+    scale: 25550
+  tc4:
+    zero: 286.4816
+    scale: 25550
+  tc5:
+    zero: 286.4816
+    scale: 25550
+  tc6:
+    zero: 286.4816
     scale: 25550
