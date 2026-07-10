@@ -63,7 +63,7 @@ stats = {
 
 # queues
 questdb_queue = queue.Queue(5)
-grafana_queue = queue.Queue(5)
+grafana_queue = queue.Queue(2)
 
 def print_log(message:str):
     lines = message.split('\n')

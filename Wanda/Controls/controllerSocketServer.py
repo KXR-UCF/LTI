@@ -106,6 +106,10 @@ class ControllerServer:
         # used to make more complex timing and controls for certain switches
         self.override_manager = OverrideManager(self)
 
+        # send defaults do grafana
+        self.post_relays_to_grafana()
+        self.post_switches_to_grafana()
+
 
     def _format_col_name(self, switch_id: str) -> str:
         """
@@ -477,7 +481,9 @@ class ControllerServer:
                 print_log("Posted status to QuestDB")
             except Exception as e:
                 print_log(f"QuestDB Error: {e}")
+        self.post_switches_to_grafana()
 
+    def post_switches_to_grafana(self) -> None:
         if GRAFANA_ENABLED:
             try:
                 # fromat bools as 1 and 0 for grafana
