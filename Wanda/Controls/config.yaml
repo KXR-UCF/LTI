@@ -20,8 +20,8 @@ PIs:
         switch: 7
         hold_position: true
       5:
-        name: Servo Power
-        switch: 9
+        name: null
+        switch: null
         hold_position: false
       6:
         name: ARM 1
@@ -33,7 +33,7 @@ PIs:
         hold_position: false
       8:
         name: FIRE
-        switch: null
+        switch: 10
         hold_position: false
 
   wanda2:
@@ -42,7 +42,7 @@ PIs:
     relays:
       1:
         name: Fuel Main  # Will be used in timing
-        switch: 5
+        switch: null
         hold_position: false
       2:
         name: NOX Main # will be used in timing
@@ -57,15 +57,15 @@ PIs:
         switch: 3
         hold_position: true
       5:
-        name: Servo Move
-        switch: 10
+        name: Dome Actuator
+        switch: 9
         hold_position: false
       6:
-        name: Dome Vent
+        name: Torch OX
         switch: 4
         hold_position: false
       7:
-        name: null
+        name: Torch Gas
         switch: null
         hold_position: false
       8:
