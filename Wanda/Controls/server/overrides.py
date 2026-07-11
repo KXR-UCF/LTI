@@ -5,7 +5,6 @@ class OverrideManager:
     
     def __init__(self, controller_instance):
         self.controller = controller_instance
-        # self.fire_enabled = False
         self.active_thread = None
 
     def process_command(self, switch_id, state):
