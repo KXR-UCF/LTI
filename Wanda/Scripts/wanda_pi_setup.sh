@@ -10,6 +10,7 @@ set -euo pipefail
 readonly WANDA_USER="lti"
 readonly WANDA_HOME="/home/${WANDA_USER}"
 readonly WANDA_DIR="${WANDA_HOME}/Wanda"
+readonly SCRIPTS_DIR="${WANDA_DIR}/Scripts"
 readonly VENV_DIR="${WANDA_HOME}/venv"
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -28,8 +29,8 @@ if [[ "$(id -un)" != "${WANDA_USER}" ]]; then
     exit 1
 fi
 
-if [[ "${SCRIPT_DIR}" != "${WANDA_DIR}" ]]; then
-    echo "Expected this repository at ${WANDA_DIR}; found it at ${SCRIPT_DIR}." >&2
+if [[ "${SCRIPT_DIR}" != "${SCRIPTS_DIR}" ]]; then
+    echo "Expected this repository at ${WANDA_DIR}; found the script at ${SCRIPT_DIR}." >&2
     echo "Update the service-unit paths before using a different location." >&2
     exit 1
 fi
@@ -68,7 +69,7 @@ sudo usermod -aG docker "${WANDA_USER}"
 
 echo "--- Creating QuestDB container ---"
 if ! sudo docker container inspect osiris > /dev/null 2>&1; then
-    sudo bash "${WANDA_DIR}/Questdb/createServer.sh"
+    sudo bash "${WANDA_DIR}/Scripts/wanda_questdb_setup.sh"
 else
     echo "QuestDB container 'osiris' already exists; leaving it unchanged."
 fi
@@ -95,7 +96,7 @@ fi
 
 if [[ "${INSTALL_GRAFANA}" == "true" ]]; then
     echo "--- Setting up Grafana ---"
-    bash "${WANDA_DIR}/wanda_grafana_setup.sh"
+    bash "${WANDA_DIR}/Scripts/wanda_grafana_setup.sh"
 fi
 
 echo "=== Setup complete ==="
