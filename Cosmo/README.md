@@ -1,151 +1,52 @@
-# COSMO WANDA - Launch Test & Infrastructure
+# COSMO - Launch Test & Infrastructure
 
-Real-time telemetry system for rocket motor testing with dual Raspberry Pi data acquisition.
+COSMO is the uprange control system. It reads commands from the serial control
+device and forwards them to the WANDA controller. COSMO does not read or write
+telemetry data; Grafana is the live telemetry interface.
 
-## Prerequisites
+## Structure
 
-- Node.js v18+
-- Python 3.8+
-- QuestDB
+| File/Folder | Description |
+|---|---|
+| [`socket_client.py`](socket_client.py) | Reads `/dev/ttyACM0` and sends commands to WANDA on port `9600` |
+| [`Systemd/`](Systemd/) | Service files for COSMO processes |
+| [`cosmo_status_server.py`](cosmo_status_server.py) | COSMO status dashboard |
+| [`ingest_telemetry.py`](ingest_telemetry.py) | Development-only QuestDB sample-data generator |
+| [`Telemetry_visualization/`](Telemetry_visualization/) | Deprecated custom telemetry frontend and backend |
 
-## Complete Setup
+---
 
-### 1. Install QuestDB
-```bash
-# macOS with Homebrew
-brew install questdb
+## Control Configuration
 
-# Alternative: Download from https://questdb.io/get-questdb/
-```
+Before enabling the COSMO control bridge, verify these values:
 
-### 2. Start QuestDB Database
-```bash
-questdb start
-```
-- Database runs on port 8812 (PostgreSQL Wire)
-- Web console available at http://localhost:9000
+| Setting | Location | Checked-in value |
+|---|---|---|
+| WANDA controller address | `socket_client.py` | `192.168.1.30:9600` |
+| Serial control device | `socket_client.py` | `/dev/ttyACM0` |
+| Relay mapping | `Wanda/Controls/config.yaml` | Must match the physical stand |
 
-### 3. Create Database Tables
-Open QuestDB web console (http://localhost:9000) and run:
-```sql
-CREATE TABLE wanda1 (
-    timestamp TIMESTAMP,
-    pt1 DOUBLE,
-    pt2 DOUBLE,
-    pt3 DOUBLE,
-    pt4 DOUBLE,
-    pt5 DOUBLE,
-    pt6 DOUBLE,
-    pt7 DOUBLE,
-    pt8 DOUBLE,
-    pt9 DOUBLE,
-    pt25 DOUBLE,
-    continuity_raw DOUBLE
-) TIMESTAMP(timestamp) PARTITION BY DAY WITH maxUncommittedRows=1, o3MaxLag=1ms;
+The current COSMO service units expect user `kxr` and paths under
+`/home/kxr/LTI-25/Cosmo`. Update the service files if the deployed location is
+different.
 
-CREATE TABLE wanda2 (
-    timestamp TIMESTAMP,
-    lc1 DOUBLE,
-    lc2 DOUBLE,
-    lc3 DOUBLE,
-    lc4 DOUBLE,
-    lc_net_force DOUBLE,
-    tc1 DOUBLE,
-    tc2 DOUBLE
-) TIMESTAMP(timestamp) PARTITION BY DAY WITH maxUncommittedRows=1, o3MaxLag=1ms;
-```
+---
 
-### 4. Install Dependencies
-```bash
-# Backend
-cd Backend
-npm install
+## Deprecated Telemetry Visualization
 
-# Frontend
-cd Frontend/vite-project
-npm install
-```
+`Telemetry_visualization/` contains the earlier custom TypeScript backend and
+Vite frontend. It is retained for reference only; Grafana is the supported live
+telemetry interface.
 
-## Running the System
-
-**Terminal 1 - Backend:**
-```bash
-cd Backend
-npm run dev
-```
-- WebSocket server runs on port 3001
-- Polls QuestDB at 60Hz
-
-**Terminal 2 - Frontend:**
-```bash
-cd Frontend/vite-project
-npm run dev
-```
-- Dashboard available at http://localhost:5173
-
-## Shutting Down
-
-### 1. Stop Frontend
-```bash
-# In frontend terminal:
-Ctrl + C
-```
-
-### 2. Stop Backend
-```bash
-# In backend terminal:
-Ctrl + C
-```
-
-### 3. Stop QuestDB
-```bash
-questdb stop
-```
+---
 
 ## Testing with Sample Data
 
-The `ingest_telemetry.py` script generates realistic telemetry data for testing.
+`ingest_telemetry.py` generates sample QuestDB telemetry for development. It
+creates or truncates its test tables, so do not run it against a production
+database.
 
-### Prerequisites
 ```bash
-pip install questdb psycopg2-binary
-```
-
-### Running the Script
-
-**Basic usage (30 seconds of data at 60Hz):**
-```bash
-cd cosmo
-python ingest_telemetry.py 30
-```
-
-**Custom duration and batch size:**
-```bash
-python ingest_telemetry.py 60 --batch-size 20
-```
-
-### What It Does
-- Automatically creates/truncates `wanda1` and `wanda2` tables
-- Generates realistic rocket burn profile data
-- Ingests at 60 samples per second to both tables
-- Uses same timestamp for synchronized data
-
-### Example Output
-```
-Setting up database tables...
-✓ Table 'wanda1' exists - truncating...
-✓ Table 'wanda2' exists - truncating...
-✅ Database setup complete!
-
-Starting telemetry ingestion:
-  - Duration: 30 seconds
-  - Target rate: 60 samples/second
-
-Progress: 10.0% | Samples: 180/1800 | Rate: 60.1 samples/sec
-...
-============================================================
-Ingestion Complete!
-  - Total samples sent: 1800 (to BOTH tables)
-  - Accuracy: 99.95%
-============================================================
+cd Cosmo
+python3 ingest_telemetry.py 30
 ```
