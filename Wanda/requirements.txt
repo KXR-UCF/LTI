@@ -12,6 +12,7 @@ python-dateutil
 pytz
 PyYAML
 questdb
+requests
 rpi-lgpio
 six
 spidev
