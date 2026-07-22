@@ -7,6 +7,7 @@ set -euo pipefail
 readonly WANDA_USER="lti"
 readonly WANDA_HOME="/home/${WANDA_USER}"
 readonly WANDA_DIR="${WANDA_HOME}/Wanda"
+readonly SCRIPTS_DIR="${WANDA_DIR}/Scripts"
 readonly CONTAINER_NAME="lti-grafana-1"
 readonly VOLUME_NAME="lti-grafana-data"
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,8 +17,8 @@ if [[ "$(id -un)" != "${WANDA_USER}" ]]; then
     exit 1
 fi
 
-if [[ "${SCRIPT_DIR}" != "${WANDA_DIR}" ]]; then
-    echo "Expected this repository at ${WANDA_DIR}; found it at ${SCRIPT_DIR}." >&2
+if [[ "${SCRIPT_DIR}" != "${SCRIPTS_DIR}" ]]; then
+    echo "Expected this repository at ${WANDA_DIR}; found the script at ${SCRIPT_DIR}." >&2
     exit 1
 fi
 
