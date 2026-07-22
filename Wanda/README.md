@@ -1,50 +1,59 @@
 # WANDA DAQ & CONTROLS
 
-This folder contains all code on the WANDA Raspberry Pis. WANDA (not to be confused with WANDA) is a data acquisition (DAQ) and remote control system designed for use during KXR engine tests. The DAQ side read high-frequency sensor readings (Load Cells, Pressure Transducers, Thermocouples, etc.) and ingests that data realtime into an onboard database. The controls side handles actuation of relays via socket communication with COSMO.
+WANDA is the downrange system for KXR engine tests. The DAQ side reads sensor
+data from the ADS1256 Pi Hats and sends it to QuestDB and Grafana Live. The
+controls side receives commands from COSMO and actuates the appropriate relays.
 
-# Structure
-
-The different systems of the WANDA DAQ & CONTROLS system is split up into separate folders.
+## Structure
 
 | File/Folder | Description |
 |---|---|
-| [`DataIngestion/`](./DataIngestion/) | Contains all code related to retrieving, sending, and storing realtime sensor data |
-| [`Controls/`](./Controls/) | Contains all code related to recieving and processing controls commands from COSMO and actuating the proper relays |
-| [`Questdb/`](./Questdb/) | Contains scripts to create QuestDB docker containers |
-| [`Systemd/`](./Systemd/) | Contains systemd service files to manage WANDA services |
-| [`status_server.py`](./status_server.py) | Runs a small Flask server to assist in managing the WANDA system without the use of a terminal |
-| [`setupPi.sh`](./setupPi.sh) | Setup script to setup a new Raspberry Pi with the WANDA system |
+| [`DataIngestion/`](./DataIngestion/) | Retrieves sensor data and sends it to QuestDB and Grafana Live |
+| [`Controls/`](./Controls/) | Receives control commands from COSMO and actuates relays |
+| [`Systemd/`](./Systemd/) | Service files for WANDA processes |
+| [`wanda_status_server.py`](./wanda_status_server.py) | Flask dashboard for monitoring and managing a WANDA Pi |
+| [`Scripts/wanda_pi_setup.sh`](./Scripts/wanda_pi_setup.sh) | Sets up a new WANDA Pi |
 
 ---
 
 ## WANDA Dashboards
 
-The WANDA Dashboards run on each WANDA Pi. These dashboards are used to monitor and manage each Pi individually. Though the dashboard, services can be controled, config files can be edited, log files can be exported, and system health can be monitored.
+The WANDA dashboard runs on each WANDA Pi. It can monitor services and system
+health, edit configuration files, and export logs.
 
-To access the dashboard connect to either the Pi's self hosted access point, or connect to the KXR network. Navigate to `http://<PI_IP_ADDRESS>:5000` in your web browser.
+Connect to the Pi's access point or the KXR network, then open
+`http://<PI_IP_ADDRESS>:5000` in a web browser.
 
-Each WANDA Pi has a static IP address:
 | Pi | IP Address |
 |---|---|
-| WANDA1 | 192.168.1.30 |
-| WANDA2 | 192.168.1.31 |
-| WANDA3 | 192.168.1.32 |
+| WANDA1 | `192.168.1.30` |
+| WANDA2 | `192.168.1.31` |
+| WANDA3 | `192.168.1.32` |
 
 ---
 
-
 ## System Setup
 
-The Wanda folder is designed to run under the `lti` user account on the Raspberry Pis in the `~/Production` directory.
+The WANDA service files are written for the `lti` user and expect the repository
+at `/home/lti/Wanda`.
 
 ```bash
-cd ~/Production
-chmod +x setupPi.sh
-./setupPi.sh
+cd /home/lti/Wanda
+bash Scripts/wanda_pi_setup.sh
 ```
+
+The setup script installs dependencies, creates QuestDB and Grafana, configures
+SPI, installs the service units, and enables the WANDA dashboard. Run it with
+`--skip-grafana` on a Pi that is not the designated Grafana host.
+
+Choose the remaining services by Pi role. In particular, only one Pi should run
+the controller socket service, QuestDB, or Grafana. See [`Systemd/README.md`](Systemd/README.md)
+for service roles and commands.
 
 ---
 
 ## Notes
 
-The QuestDB dashboard is accessible at http://192.168.1.7:9000
+- Sensor channels and calibration are configured in [`DataIngestion/config.yaml`](DataIngestion/config.yaml).
+- Relay names and switch mappings are configured in [`Controls/config.yaml`](Controls/config.yaml).
+- Grafana requires a service-account token in the applicable `grafana.key` files.

@@ -12,7 +12,7 @@ start services at boot, recover them after failures, and inspect their logs.
 | [dataingestion.service](dataingestion.service) | Each Pi with sensors | Runs the ADC-to-QuestDB/Grafana ingestion loop |
 | [questdb.service](questdb.service) | One host only | Runs the QuestDB Docker container |
 | [wanda_status_server.service](wanda_status_server.service) | Each WANDA Pi | Runs the local management dashboard |
-| [grafana.service](grafana.service) | One host | Runs the Grafana container created by `wanda_grafana_setup.sh` |
+| [grafana.service](grafana.service) | One host | Runs the Grafana container created by `Scripts/wanda_grafana_setup.sh` |
 | [lti-assets.service](lti-assets.service) | As required | Manages LTI assets service |
 
 Do not enable both the controller and worker socket services on the same Pi
