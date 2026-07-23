@@ -15,6 +15,8 @@ est = timezone('US/Eastern')
 
 from overrideCMD import OverrideManager
 
+DISCONNECT_TIMEOUT_SECONDS = 600
+
 # grafana config
 GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/controls"
 # GRAFANA_URL = f"http://192.168.1.32:3000/api/live/push/"
@@ -660,7 +662,7 @@ class ControllerServer:
             self.send_command_to_worker(worker_id, "SHUTDOWN", max_retries=2)
 
 
-    def reconnect_cosmo(self, timeout_seconds=300) -> None:
+    def reconnect_cosmo(self) -> None:
         """Recconnects COSMO during a disconnection
 
         Args:
@@ -678,7 +680,7 @@ class ControllerServer:
         start_time = time.time()
         self.server_socket.settimeout(1.0)  # sets time step to check timer
 
-        while time.time() - start_time < timeout_seconds:
+        while time.time() - start_time < DISCONNECT_TIMEOUT_SECONDS:
             try:
                 client_socket, client_address = self.server_socket.accept()
                 self.enable_keepalive(client_socket)
