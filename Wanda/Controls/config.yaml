@@ -109,7 +109,3 @@ PIs:
         name: null
         switch: null
         hold_position: false
-
-
-COSMO:
-  ip: 192.168.1.6
