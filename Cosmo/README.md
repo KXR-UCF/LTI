@@ -26,6 +26,13 @@ Before enabling the COSMO control bridge, verify these values:
 | Serial control device | `socket_client.py` | `/dev/ttyACM0` |
 | Relay mapping | `Wanda/Controls/config.yaml` | Must match the physical stand |
 
+## Controller identification
+
+On connection, COSMO sends `IDENTIFY COSMO;` and waits for
+`ACK: IDENTIFY COSMO;` before sending commands. This lets a manual client
+replace COSMO without needing a fixed COSMO IP address: send the same identity
+message first, wait for the acknowledgement, then send normal commands.
+
 The current COSMO service units expect user `kxr` and paths under
 `/home/kxr/LTI-25/Cosmo`. Update the service files if the deployed location is
 different.
