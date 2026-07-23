@@ -4,18 +4,25 @@ import time
 import os
 
 controller_pi_address = "192.168.1.30"
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 start_time = time.time()
 connected = False
 print(f"Attempting to connect to {controller_pi_address}")
 while not connected:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.connect((controller_pi_address, 9600))
+        s.sendall(b"IDENTIFY COSMO;")
+        s.settimeout(3)
+        response = s.recv(1024).decode().strip()
+        if response != "ACK: IDENTIFY COSMO;":
+            raise OSError(f"Unexpected identification response: {response!r}")
+        s.settimeout(None)
         connected = True
     except OSError as e:
+        s.close()
         program_time = time.time() - start_time
-        print(f"{program_time:<5.2f}s Failed to connect... Attempting to connect")
+        print(f"{program_time:<5.2f}s Failed to identify with controller... Attempting to connect")
         time.sleep(1)
 if connected:
     print(f"Connected to {controller_pi_address}")
