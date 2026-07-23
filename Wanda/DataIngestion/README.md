@@ -24,6 +24,11 @@ At the top of `dataingestions.py`, several configuration constants can be adjust
 |---|---|---|
 | `DAQ_CONFIG_FILENAME` | `"config.yaml"` | Relative path to config YAML file to be passed to `DAQ` class |
 | `TARGET_RPS` | `100` | Target sample rate of all sensors in Hz |
+| `QUESTDB_AUTO_FLUSH_ROWS` | `250` | Number of raw rows buffered by the QuestDB client before it sends them. |
+| `QUESTDB_AUTO_FLUSH_INTERVAL_MS` | `1000` | Maximum interval in milliseconds before a subsequent row triggers a QuestDB batch send. |
+| `GRAFANA_SEND_HZ` | `10` | Grafana Live publish rate. Every published row contains the per-field median of all samples acquired during that interval. |
+| `GRAFANA_EMA_ENABLED` | `False` | Enables an optional EMA after the per-interval median. |
+| `GRAFANA_EMA_STRENGTH` | `0.25` | EMA weight for the newest median when EMA is enabled. |
 | `QDB_CONF` | `http::addr=192.168.1.32:9000` | Questdb configuration string for QuestDB library |
 | `GRAFANA_URL` | `http://192.168.1.32:3000/api/live/push/{HOSTNAME}` | Grafana Live url to push data to. |
 
