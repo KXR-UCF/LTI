@@ -218,12 +218,9 @@ class ControllerServer:
         """Accepts all incomming connections.
 
         Tracks if COSMO and the expected number of worker pis have connected.
-        Uses the config file to check if the ip address of an incoming
-        connection matches the ip of an enabled worker pi or cosmo
-
-        TODO:
-            * Check hostnames instead of ip addresses
-            * Use handshake of some sort 
+        COSMO identifies itself with ``IDENTIFY COSMO;`` immediately after
+        connecting. Worker Pis continue to be identified by their configured
+        IP addresses.
 
         Warning:
             This method will block indefinitely if a worker Pi or COSMO fails 
@@ -241,14 +238,32 @@ class ControllerServer:
             self.enable_keepalive(client_socket)
             ip = client_address[0]
 
-            # TODO: Do handshake with incoming connection (maybe to get hostname)
+            # COSMO sends an identity message immediately after connecting.
+            # Workers do not send first, so a short timeout lets their existing
+            # IP-based connection flow continue unchanged.
+            client_socket.settimeout(2.0)
+            try:
+                identity_message = client_socket.recv(1024).decode().strip()
+            except socket.timeout:
+                identity_message = ""
+            except (socket.error, UnicodeDecodeError) as e:
+                print_log(f"Error reading connection identity from {ip}: {e}")
+                client_socket.close()
+                continue
+            finally:
+                client_socket.settimeout(None)
 
-            # check for COSMO connection against ip address
-            # TODO: Check against hostname instead of ip address
-            if ip == self.config["COSMO"]["ip"]:
-                self.cosmo_socket = client_socket
-                COSMO_connected = True
-                print_log("COSMO Connection Established")
+            if identity_message:
+                if identity_message == "IDENTIFY COSMO;" and not COSMO_connected:
+                    self.cosmo_socket = client_socket
+                    self.cosmo_address = client_address
+                    COSMO_connected = True
+                    client_socket.sendall(b"ACK: IDENTIFY COSMO;")
+                    print_log("COSMO Connection Established")
+                    continue
+
+                print_log(f"Unexpected identity message from {ip}. Closing connection.")
+                client_socket.close()
                 continue
 
             # check for worker Pi connection against ip address
@@ -266,9 +281,9 @@ class ControllerServer:
                     num_connected_workers += 1
                     break
 
-            # ! ISSUE: seems like this would not flag unkown connections after cosmo connects
-            if not known_worker and not COSMO_connected:
+            if not known_worker:
                 print_log(f"Unknown connection from {ip}")
+                client_socket.close()
 
         print_log("ALL CONNECTIONs ESTABLISHED")
 
@@ -685,10 +700,22 @@ class ControllerServer:
                 client_socket, client_address = self.server_socket.accept()
                 self.enable_keepalive(client_socket)
                 ip = client_address[0]
-                
-                if ip == self.config["COSMO"]["ip"]:
+
+                client_socket.settimeout(2.0)
+                try:
+                    identity_message = client_socket.recv(1024).decode().strip()
+                except socket.timeout:
+                    identity_message = ""
+                except (socket.error, UnicodeDecodeError) as e:
+                    print_log(f"Error reading reconnect identity from {ip}: {e}")
+                    identity_message = ""
+                finally:
+                    client_socket.settimeout(None)
+
+                if identity_message == "IDENTIFY COSMO;":
                     self.cosmo_socket = client_socket
                     self.cosmo_address = client_address
+                    client_socket.sendall(b"ACK: IDENTIFY COSMO;")
                     self.server_socket.settimeout(None)
                     print_log("COSMO Reconnected successfully!")
                     return True

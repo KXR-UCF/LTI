@@ -24,8 +24,16 @@ def main():
     
     try:
         s.connect((CONTROLLER_IP, PORT))
+        s.sendall(b"IDENTIFY COSMO;")
+        s.settimeout(3)
+        response = s.recv(1024).decode().strip()
+        if response != "ACK: IDENTIFY COSMO;":
+            raise ConnectionError(f"Unexpected identification response: {response!r}")
+        s.settimeout(None)
+        print("Connected and identified as COSMO.")
     except Exception as e:
-        print(f"Failed to connect: {e}")
+        print(f"Failed to connect and identify: {e}")
+        s.close()
         sys.exit(1)
 
     # Start the listening thread
