@@ -104,8 +104,10 @@ def index():
             cfg_btns = ''.join([f'<a class="btn btn-primary" href="/file/{f}">{f}</a>' for f in cfgs])
 
     # Builds dashboard UI
-    return render_template_string(CSS + f'''
-    <h1>{hostname} Dashboard</h1>
+    return render_template_string(CSS + f'''<div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px;">
+        <h1>{hostname} Dashboard</h1>
+        <span id="system_time" style="font-family: monospace; color: #555; font-size: 1.1rem;">--</span>
+    </div>
     
     <div class="card">
         <h3>System Control</h3>
@@ -183,6 +185,7 @@ def index():
             disk.style.color = d.disk > 90 ? '#dc3545' : '#007bff';
 
             document.getElementById('uptime').textContent = d.uptime;
+            document.getElementById('system_time').textContent = d.system_time;
         }};
 
         // Calls backend to interact with services
@@ -250,7 +253,8 @@ def stream():
                 'memory': psutil.virtual_memory().percent, 
                 'temp': t,
                 'disk': psutil.disk_usage('/').percent,
-                'uptime': uptime_str
+                'uptime': uptime_str,
+                'system_time': time.strftime("%Y-%m-%d %H:%M:%S")
             }
             
             # Send data every 2 seconds
