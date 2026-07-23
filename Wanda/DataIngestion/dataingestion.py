@@ -37,7 +37,7 @@ QUESTDB_QUEUE_SIZE = 2048
 # Grafana is a display stream, not the raw acquisition archive.  Collect all
 # samples received during each interval, publish their per-field median, and
 # retain the unfiltered stream in QuestDB.
-GRAFANA_SEND_HZ = 10
+GRAFANA_SEND_HZ = 30
 GRAFANA_WINDOW_SECONDS = 1.0 / GRAFANA_SEND_HZ
 GRAFANA_QUEUE_SIZE = 256
 
@@ -155,7 +155,7 @@ def grafana_worker():
             now = time.monotonic()
             if now >= next_publish_time:
                 if window_samples:
-                    publish(filter_window(window_samples))
+                    publish(columns=filter_window(window_samples))
                     window_samples.clear()
 
                 # Keep a fixed publish cadence even if a slow POST skipped one
