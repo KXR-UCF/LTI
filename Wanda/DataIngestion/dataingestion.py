@@ -37,7 +37,7 @@ QUESTDB_QUEUE_SIZE = 2048
 # Grafana is a display stream, not the raw acquisition archive.  Collect all
 # samples received during each interval, publish their per-field median, and
 # retain the unfiltered stream in QuestDB.
-GRAFANA_SEND_HZ = 30
+GRAFANA_SEND_HZ = 20
 GRAFANA_WINDOW_SECONDS = 1.0 / GRAFANA_SEND_HZ
 GRAFANA_QUEUE_SIZE = 256
 
