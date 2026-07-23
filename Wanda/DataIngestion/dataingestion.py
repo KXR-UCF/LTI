@@ -26,9 +26,27 @@ module_directory = os.path.dirname(module_path)
 # config
 DAQ_CONFIG_FILENAME = os.path.join(module_directory, "config.yaml")
 TARGET_RPS = 100
-EMA_STRENGTH = 0.25
-MEDIAN_RANGE = 10
 SAMPLE_INTERVAL = 1.0 / TARGET_RPS
+
+# QuestDB batches raw rows internally.  It flushes after this many rows, or
+# after this many milliseconds have elapsed when the next row is appended.
+QUESTDB_AUTO_FLUSH_ROWS = 250
+QUESTDB_AUTO_FLUSH_INTERVAL_MS = 1000
+QUESTDB_QUEUE_SIZE = 2048
+
+# Grafana is a display stream, not the raw acquisition archive.  Collect all
+# samples received during each interval, publish their per-field median, and
+# retain the unfiltered stream in QuestDB.
+GRAFANA_SEND_HZ = 10
+GRAFANA_WINDOW_SECONDS = 1.0 / GRAFANA_SEND_HZ
+GRAFANA_QUEUE_SIZE = 256
+
+# Optional second smoothing stage, applied after the window median.  Leave it
+# disabled for the lowest-latency filtered display.
+GRAFANA_EMA_ENABLED = False
+GRAFANA_EMA_STRENGTH = 0.25
+
+
 est = timezone('US/Eastern')
 HOSTNAME = socket.gethostname()
 
@@ -36,8 +54,8 @@ HOSTNAME = socket.gethostname()
 QDB_CONF = (
     'http::addr=192.168.1.32:9000;'
     'auto_flush=on;'
-    'auto_flush_interval=15;'
-    # 'auto_flush_rows=2;'
+    f'auto_flush_rows={QUESTDB_AUTO_FLUSH_ROWS};'
+    f'auto_flush_interval={QUESTDB_AUTO_FLUSH_INTERVAL_MS};'
 )
 
 # grafana config
@@ -62,8 +80,8 @@ stats = {
 }
 
 # queues
-questdb_queue = queue.Queue(5)
-grafana_queue = queue.Queue(2)
+questdb_queue = queue.Queue(QUESTDB_QUEUE_SIZE)
+grafana_queue = queue.Queue(GRAFANA_QUEUE_SIZE)
 
 def print_log(message:str):
     lines = message.split('\n')
@@ -85,7 +103,6 @@ def questdb_worker():
                     at=data['time']
                 )
                 stats['questdb_send_time'].append(time.perf_counter() - start)
-
                 questdb_queue.task_done()
 
     except Exception as e:
@@ -93,49 +110,76 @@ def questdb_worker():
 
 
 def grafana_worker():
-    prev_data_columns = None
-    raw_history = {}
+    previous_filtered_columns = {}
+    window_samples = []
+    next_publish_time = time.monotonic() + GRAFANA_WINDOW_SECONDS
+
+    def filter_window(samples):
+        """Return the median of every field represented in this time window."""
+        fields = set().union(*(sample.keys() for sample in samples))
+        median_columns = {
+            field: statistics.median(
+                sample[field] for sample in samples if field in sample
+            )
+            for field in fields
+        }
+
+        if not GRAFANA_EMA_ENABLED:
+            return median_columns
+
+        filtered_columns = {}
+        for field, value in median_columns.items():
+            previous_value = previous_filtered_columns.get(field, value)
+            filtered_columns[field] = (
+                GRAFANA_EMA_STRENGTH * value
+                + (1 - GRAFANA_EMA_STRENGTH) * previous_value
+            )
+        previous_filtered_columns.update(filtered_columns)
+        return filtered_columns
+
+    def publish(columns):
+        fields = ",".join([f"{key}={value}" for key, value in columns.items()])
+        payload = f"telemetry {fields}"
+
+        try:
+            start = time.perf_counter()
+            requests.post(GRAFANA_URL, data=payload, headers=GRAFANA_HEADERS, timeout=0.1)
+            stats['grafana_send_time'].append(time.perf_counter() - start)
+        except requests.exceptions.RequestException:
+            pass # Silently ignore network timeouts so we don't spam logs
+        except Exception as e:
+            print_log(f"Unexpected Grafana Formatting Error: {e}")
+
     try:
         while True:
-            data = grafana_queue.get()
+            now = time.monotonic()
+            if now >= next_publish_time:
+                if window_samples:
+                    publish(filter_window(window_samples))
+                    window_samples.clear()
+
+                # Keep a fixed publish cadence even if a slow POST skipped one
+                # or more intervals.
+                now = time.monotonic()
+                while next_publish_time <= now:
+                    next_publish_time += GRAFANA_WINDOW_SECONDS
+                continue
+
+            timeout = next_publish_time - now
+            try:
+                data = grafana_queue.get(timeout=timeout)
+            except queue.Empty:
+                # The next iteration gives publishing precedence over dequeuing
+                # even when samples arrive continuously.
+                continue
+
             if data is None:
                 break
 
-            grafana_cols = data['columns'].copy()
-
-            if prev_data_columns is None:
-                prev_data_columns = grafana_cols.copy()
-                for field, value in grafana_cols.items():
-                    raw_history[field] = deque([value]*MEDIAN_RANGE, maxlen=MEDIAN_RANGE)
-
-            # apply moving median and exponential moving average
-            for field, value in grafana_cols.items():
-                if field not in raw_history:
-                    raw_history[field] = deque([value]*MEDIAN_RANGE, maxlen=MEDIAN_RANGE)
-                raw_history[field].append(value)
-
-                median_value = statistics.median(raw_history[field])
-
-                # diff = abs(median_value - prev_data_columns[field])
-                # dynamic_strength = min(0.5, EMA_STRENGTH + (diff * 0.02))
-
-                grafana_cols[field] = (EMA_STRENGTH * median_value) + ((1-EMA_STRENGTH) * prev_data_columns[field])
-            prev_data_columns = grafana_cols.copy()
-
-            try:
-                fields = ",".join([f"{k}={v}" for k, v in grafana_cols.items()])
-                payload = f"telemetry {fields}"
-
-                start = time.perf_counter()
-                requests.post(GRAFANA_URL, data=payload, headers=GRAFANA_HEADERS, timeout=0.1)
-                stats['grafana_send_time'].append(time.perf_counter() - start)
-
-            except requests.exceptions.RequestException:
-                pass # Silently ignore network timeouts so we don't spam logs
-            except Exception as e:
-                print_log(f"Unexpected Grafana Formatting Error: {e}")
-            finally:
-                grafana_queue.task_done()
+            window_samples.append(data['columns'])
+            # The sample is now retained by window_samples, so release the
+            # queue slot before the next Grafana HTTP request.
+            grafana_queue.task_done()
 
     except Exception as e:
         print_log(f"Grafana Error: {e}")
