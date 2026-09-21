@@ -1,0 +1,111 @@
+PIs:
+  wanda1:
+    enabled: true
+    ip: 192.168.1.30
+    relays:
+      1:
+        name: Nox Fill
+        switch: 1
+        hold_position: false
+      2:
+        name: Nox Vent
+        switch: 2
+        hold_position: true
+      3:
+        name: N2 Fill
+        switch: 6
+        hold_position: false
+      4:
+        name: N2 Vent
+        switch: 7
+        hold_position: true
+      5:
+        name: null
+        switch: null
+        hold_position: false
+      6:
+        name: ARM 1
+        switch: null
+        hold_position: false
+      7:
+        name: ARM 2
+        switch: null
+        hold_position: false
+      8:
+        name: FIRE
+        switch: 10
+        hold_position: false
+
+  wanda2:
+    enabled: true
+    ip: 192.168.1.31
+    relays:
+      1:
+        name: Fuel Main  # Will be used in timing
+        switch: null
+        hold_position: false
+      2:
+        name: NOX Main # will be used in timing
+        switch: 5
+        hold_position: false
+      3:
+        name: Fuel Relief
+        switch: 8
+        hold_position: true
+      4:
+        name: NOX Relief
+        switch: 3
+        hold_position: true
+      5:
+        name: Dome Actuator
+        switch: 9
+        hold_position: false
+      6:
+        name: Torch OX
+        switch: 4
+        hold_position: false
+      7:
+        name: Torch Gas
+        switch: null
+        hold_position: false
+      8:
+        name: null
+        switch: null
+        hold_position: false
+
+  wanda3:
+    enabled: false
+    ip: 192.168.1.32
+    relays:
+      1:
+        name: null
+        switch: null
+        hold_position: false
+      2:
+        name: null
+        switch: null
+        hold_position: false
+      3:
+        name: null
+        switch: null
+        hold_position: false
+      4:
+        name: null
+        switch: null
+        hold_position: false
+      5:
+        name: null
+        switch: null
+        hold_position: false
+      6:
+        name: null
+        switch: null
+        hold_position: false
+      7:
+        name: null
+        switch: null
+        hold_position: false
+      8:
+        name: null
+        switch: null
+        hold_position: false

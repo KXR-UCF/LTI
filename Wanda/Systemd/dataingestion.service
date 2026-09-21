@@ -1,0 +1,14 @@
+[Unit]
+Description=Data Ingestion Service
+After=network.target questdb.service
+
+[Service]
+Type=simple
+User=lti
+WorkingDirectory=/home/lti/
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Wanda/DataIngestion/dataingestion.py >> /home/lti/Wanda/data.log 2>&1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

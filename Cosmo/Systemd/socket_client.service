@@ -1,0 +1,14 @@
+[Unit]
+Description=Starts socket client
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=kxr
+WorkingDirectory=/home/kxr/LTI-25/Cosmo
+ExecStart=/bin/bash -c '/home/kxr/venv/bin/python3 -u /home/kxr/LTI-25/Cosmo/socket_client.py >> /home/kxr/LTI-25/Cosmo/socket_client.log 2>&1'
+
+[Install]
+WantedBy=multi-user.target

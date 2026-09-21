@@ -1,0 +1,14 @@
+[Unit]
+Description=Status Server Service (SSS)
+After=network.target
+
+[Service]
+Type=simple
+User=lti
+WorkingDirectory=/home/lti/
+ExecStart=/bin/bash -c '/home/lti/venv/bin/python3 -u /home/lti/Wanda/wanda_status_server.py >> /home/lti/Wanda/status.log 2>&1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
